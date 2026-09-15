@@ -6,8 +6,10 @@ import { AngleSchema } from '@/lib/schemas';
 import { inngest, EVENTS } from '@/inngest/client';
 
 export const dynamic = 'force-dynamic';
-/** The inline pipeline takes a few minutes (research with web search). */
-export const maxDuration = 600;
+/** The inline pipeline takes a few minutes (research with web search), but
+ *  Vercel's hobby plan caps serverless functions at 300s. Runs longer than
+ *  that will 504; set PIPELINE_MODE=inngest to offload them. */
+export const maxDuration = 300;
 
 type Ctx = { params: Promise<{ slug: string }> };
 

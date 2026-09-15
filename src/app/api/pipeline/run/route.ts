@@ -5,7 +5,9 @@ import { generateForConcept } from '@/lib/pipeline/generate';
 import { inngest, EVENTS } from '@/inngest/client';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 600;
+/** Vercel's hobby plan caps serverless functions at 300s. Runs longer than
+ *  that will 504; set PIPELINE_MODE=inngest to offload them. */
+export const maxDuration = 300;
 
 const Body = z.object({
   /** Only run the selector and report the ranking; generate nothing. */
