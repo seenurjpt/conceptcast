@@ -1,26 +1,76 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf9;
+  --foreground: #1c1917;
+  --muted: #78716c;
+  --border: #e7e5e4;
+  --panel: #ffffff;
+  --accent: #0a66c2;
+  --accent-soft: #e8f0fb;
+  --danger: #b91c1c;
+  --ok: #15803d;
+  --warn: #b45309;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-panel: var(--panel);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0c0a09;
+    --foreground: #e7e5e4;
+    --muted: #a8a29e;
+    --border: #292524;
+    --panel: #1c1917;
+    --accent: #6ba6e8;
+    --accent-soft: #172a44;
+    --danger: #f87171;
+    --ok: #4ade80;
+    --warn: #fbbf24;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+.btn {
+  @apply inline-flex items-center gap-1 rounded-md border border-border bg-panel px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40;
+}
+.btn-primary {
+  @apply border-accent bg-accent text-white hover:bg-accent/90 hover:text-white;
+}
+.btn-danger {
+  @apply border-danger/40 text-danger hover:bg-danger/10;
+}
+.input {
+  @apply w-full rounded-md border border-border bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent;
+}
+.panel {
+  @apply rounded-lg border border-border bg-panel p-4;
+}
+.label {
+  @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-muted;
+}
+.pill {
+  @apply inline-block rounded-full border border-border px-2 py-0.5 text-xs;
+}
+.post-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
 }

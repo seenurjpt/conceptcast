@@ -6,22 +6,38 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"tests/**/*.test.ts\"",
+    "seed": "tsx scripts/seed.ts",
+    "draft": "tsx scripts/draft.ts",
+    "select": "tsx scripts/select.ts",
+    "publish-due": "tsx scripts/publish-due.ts",
+    "timeliness": "tsx scripts/timeliness.ts",
+    "smoke-db": "tsx scripts/smoke-db.ts",
+    "verify-sources": "tsx scripts/verify-sources.ts",
+    "inngest:dev": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "inngest": "^4.20.0",
+    "mongoose": "^9.9.4",
+    "next": "15.5.25",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.25"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.5.25",
-    "@eslint/eslintrc": "^3"
+    "mongodb-memory-server": "^11.2.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5"
   }
 }
