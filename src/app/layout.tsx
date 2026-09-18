@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { SessionProvider } from '@/components/SessionProvider';
+import { DialogProvider } from '@/components/Modal';
 
 // DESIGN.md documents these as the substitutes for the licensed Coinbase faces.
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'] });
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body className={`${inter.variable} ${mono.variable} font-sans`}>
         {/* The login screen has no nav, so chrome lives in the (dashboard) group. */}
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <DialogProvider>{children}</DialogProvider>
+        </SessionProvider>
       </body>
     </html>
   );

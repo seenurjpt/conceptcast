@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation';
 
-/** The review queue is the only screen that matters (spec §9), so it is home. */
+/**
+ * Topics first. The flow is: pick a concept, generate a post, review it.
+ * The review queue is step two, so it is not the front door.
+ */
 export default function Home() {
-  redirect('/review');
+  redirect('/backlog');
 }

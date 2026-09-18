@@ -94,8 +94,8 @@ export default function CalendarPage() {
   return (
     <>
       <PageHeader
-        title="Calendar"
-        subtitle="Two posts a week beats five. Scheduled posts publish automatically every fifteen minutes."
+        title="Published"
+        subtitle="What has gone out, and anything you scheduled for later."
         actions={
           <div className="flex items-center gap-1">
             <button
@@ -172,7 +172,7 @@ export default function CalendarPage() {
           {loading ? (
             <div className="h-24 animate-pulse rounded-[12px] bg-surface-soft" />
           ) : upcoming.length === 0 ? (
-            <p className="t-body-sm text-muted">Nothing scheduled. Approve a draft in the review queue.</p>
+            <p className="t-body-sm text-muted">Nothing scheduled. Approving a draft publishes it straight away unless you pick a time.</p>
           ) : (
             <ul className="row-list">
               {upcoming.map((p) => (
@@ -257,7 +257,11 @@ function ScheduledRow({ p, run }: { p: Pub; run: (fn: () => Promise<string | voi
           <ActionButton
             className="btn btn-sm"
             pendingLabel="Publishing…"
-            confirm="Publish this to LinkedIn right now?"
+            confirm={{
+              title: "Publish to LinkedIn now?",
+              body: "This posts to your feed immediately. You can delete it on LinkedIn afterwards, but it will have been visible.",
+              confirmLabel: "Publish",
+            }}
             onClick={() => run(async () => {
               const r = await sendJson<{ outcome: { status: string; error?: string; postUrn?: string } }>(
                 `/api/publications/${p._id}`,
@@ -277,7 +281,12 @@ function ScheduledRow({ p, run }: { p: Pub; run: (fn: () => Promise<string | voi
         )}
         <ActionButton
           className="btn btn-danger btn-sm"
-          confirm="Unschedule this post? The draft stays approved."
+          confirm={{
+            title: "Unschedule this post?",
+            body: "It will not publish at the scheduled time. The draft stays approved, so you can schedule it again.",
+            confirmLabel: "Unschedule",
+            danger: true,
+          }}
           onClick={() => run(async () => {
             await sendJson(`/api/publications/${p._id}`, 'DELETE');
             return 'Unscheduled. The draft is still approved.';

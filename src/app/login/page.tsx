@@ -16,15 +16,15 @@ export const dynamic = 'force-dynamic';
  * cut rather than the type shrunk past readability.
  */
 const STEPS = [
-  ['01', 'A curated backlog, in order', '63 concepts wired into a prerequisite graph, so the feed reads as a curriculum.'],
-  ['02', 'Researched against primary sources', 'Papers, docs and source. Every fact carries a URL; shaky ones are dropped.'],
-  ['03', 'Drafted, then argued with', 'Three angles per concept, scored against a depth rubric. Weak drafts get killed.'],
-  ['04', 'Nothing publishes without you', 'Every draft waits in a review queue with its sources one click away.'],
+  ['01', 'Pick a topic', '63 AI engineering concepts, ordered so each builds on the last. Choose one and hit generate.'],
+  ['02', 'It researches the sources', 'Papers, docs and source code. Every fact carries a URL; shaky ones are dropped.'],
+  ['03', 'It drafts and critiques itself', 'Three angles, scored against a depth rubric. Weak drafts get killed, not shipped.'],
+  ['04', 'You decide what goes out', 'The draft waits with its sources one click away. Publish it, edit it, or bin it.'],
 ];
 
 const STATS = [
-  ['63', 'concepts seeded'],
-  ['2', 'posts a week'],
+  ['63', 'topics ready'],
+  ['3', 'minutes a draft'],
   ['~$0.30', 'per post'],
 ];
 
@@ -59,8 +59,8 @@ export default function LoginPage() {
           </h1>
 
           <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-white/60">
-            News decays in a day. This agent works through a curated backlog of AI engineering concepts, researches
-            each against primary sources, and drafts explainers that are still correct in a year.
+            News decays in a day. Pick a concept from the backlog and this researches it against primary sources,
+            then drafts an explainer that is still correct in a year. You approve every post.
           </p>
 
           <div className="mt-7">
@@ -105,8 +105,7 @@ export default function LoginPage() {
           {/* Desktop only: it balances the taller hero column. On a short phone
               the same paragraph is what pushes the page into a scroll. */}
           <p className="mt-6 hidden border-t border-hairline pt-4 text-[12px] leading-snug text-muted-soft lg:block">
-            Two posts a week, drafted from primary sources and held for your review. Sign out any time from the
-            account menu.
+            Nothing runs on its own. You pick the topic and you approve the post.
           </p>
         </div>
       </section>

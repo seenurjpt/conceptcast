@@ -209,7 +209,20 @@ export async function refreshIfDue(): Promise<{ state: AuthState; refreshed: boo
     return { state: 'refresh-expired', refreshed: false };
   }
   const tokens = await refreshTokens(auth.refreshToken);
-  await storeTokens(tokens, { urn: auth.memberUrn, name: auth.memberName });
+
+  // Re-read the profile on refresh. LinkedIn's CDN URLs are time-limited, so a
+  // stored picture eventually 404s and the avatar silently falls back to
+  // initials; this also picks up a changed name or photo. A failure here must
+  // not lose the new tokens, so fall back to what we already had.
+  let member = { urn: auth.memberUrn, name: auth.memberName, picture: auth.memberPicture, email: auth.memberEmail };
+  try {
+    const me = await fetchUserInfo(tokens.access_token);
+    member = { urn: `urn:li:person:${me.sub}`, name: me.name, picture: me.picture, email: me.email };
+  } catch (e) {
+    console.error(`LinkedIn userinfo failed during refresh, keeping stored profile: ${(e as Error).message}`);
+  }
+
+  await storeTokens(tokens, member);
   return { state: 'ok', refreshed: true };
 }
 

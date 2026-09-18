@@ -29,6 +29,10 @@ export interface ConceptDoc {
   timelinessBoost: number;
   /** Why the last pipeline run killed the draft (spec 5.5), or a human note. */
   note: string | null;
+  /** Where the topic came from. News topics are perishable; the UI shows their age. */
+  origin: 'seed' | 'proposal' | 'news';
+  /** For news topics: when the story broke. */
+  storyDate: Date | null;
   createdAt: Date;
 }
 
@@ -56,6 +60,8 @@ const ConceptSchema = new Schema<ConceptDoc>({
   publishedDraftId: { type: Schema.Types.ObjectId, ref: 'Draft', default: null },
   timelinessBoost: { type: Number, required: true, default: 0 },
   note: { type: String, default: null },
+  origin: { type: String, required: true, enum: ['seed', 'proposal', 'news'], default: 'seed' },
+  storyDate: { type: Date, default: null },
   createdAt: { type: Date, required: true, default: () => new Date() },
 });
 ConceptSchema.index({ status: 1, track: 1 });
@@ -320,8 +326,18 @@ const LinkedInAuthSchema = new Schema<LinkedInAuthDoc>({
 
 /* ── conceptProposals (monthly backlog-growth job) ────────────────────────── */
 
-export const PROPOSAL_STATUSES = ['pending', 'accepted', 'rejected'] as const;
+export const PROPOSAL_STATUSES = ['pending', 'accepted', 'rejected', 'expired'] as const;
 export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
+
+/** The story behind a news-sourced proposal: what the feeds said and where. */
+export interface NewsStory {
+  headline: string;
+  links: { url: string; title: string; feed: string; publishedAt: Date | null }[];
+  newestAt: Date | null;
+  clusterSize: number;
+  /** Deterministic cluster score (coverage + recency), not the model's. */
+  score: number;
+}
 
 export interface ConceptProposalDoc {
   _id: Types.ObjectId;
@@ -336,6 +352,11 @@ export interface ConceptProposalDoc {
   primarySources: PrimarySourceDoc[];
   rationale: string;
   status: ProposalStatus;
+  /** 'model' = the monthly propose-10 job; 'news' = the daily feed scan. */
+  source: 'model' | 'news';
+  story: NewsStory | null;
+  /** News proposals expire unaccepted; model proposals never do. */
+  expiresAt: Date | null;
   createdAt: Date;
 }
 
@@ -351,6 +372,35 @@ const ConceptProposalSchema = new Schema<ConceptProposalDoc>({
   primarySources: { type: [PrimarySourceSchema], required: true, default: [] },
   rationale: { type: String, required: true },
   status: { type: String, required: true, enum: PROPOSAL_STATUSES, default: 'pending', index: true },
+  source: { type: String, required: true, enum: ['model', 'news'], default: 'model', index: true },
+  story: {
+    type: new Schema<NewsStory>(
+      {
+        headline: { type: String, required: true },
+        links: {
+          type: [
+            new Schema(
+              {
+                url: { type: String, required: true },
+                title: { type: String, required: true },
+                feed: { type: String, required: true, default: '' },
+                publishedAt: { type: Date, default: null },
+              },
+              { _id: false },
+            ),
+          ],
+          required: true,
+          default: [],
+        },
+        newestAt: { type: Date, default: null },
+        clusterSize: { type: Number, required: true, default: 1 },
+        score: { type: Number, required: true, default: 0 },
+      },
+      { _id: false },
+    ),
+    default: null,
+  },
+  expiresAt: { type: Date, default: null },
   createdAt: { type: Date, required: true, default: () => new Date() },
 });
 

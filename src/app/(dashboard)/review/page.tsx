@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { getJson, sendJson, fmtRelative, fmtDate, toLocalInput, LINKEDIN_FOLD } from '@/lib/ui';
 import { checkHardConstraints, MIN_CHARS, MAX_CHARS } from '@/lib/pipeline/constraints';
 import { useSession } from '@/components/SessionProvider';
+import { useDialog } from '@/components/Modal';
 import {
   ActionButton,
   CharMeter,
@@ -87,7 +89,14 @@ export default function ReviewPage() {
     try {
       const { drafts } = await getJson<{ drafts: DraftRow[] }>(`/api/drafts?status=${tab}`);
       setRows(drafts);
-      setSelectedId((cur) => (cur && drafts.some((d) => d._id === cur) ? cur : (drafts[0]?._id ?? null)));
+      // ?draft=<id> comes from the Topics screen, so a freshly written post
+      // opens straight away instead of making you hunt for it.
+      const requested = new URLSearchParams(window.location.search).get('draft');
+      setSelectedId((cur) => {
+        if (requested && drafts.some((d) => d._id === requested)) return requested;
+        if (cur && drafts.some((d) => d._id === cur)) return cur;
+        return drafts[0]?._id ?? null;
+      });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -129,7 +138,7 @@ export default function ReviewPage() {
   return (
     <>
       <PageHeader
-        title="Review queue"
+        title="Drafts"
         subtitle="Every claim carries a source. Open them before you approve — your name goes on this."
         actions={
           <Segmented
@@ -160,10 +169,13 @@ export default function ReviewPage() {
         </div>
       ) : rows.length === 0 ? (
         <div className="mt-4">
-          <EmptyState title={`Nothing ${tab}`}>
+          <EmptyState title={tab === 'pending' ? 'No drafts waiting' : `Nothing ${tab}`}>
             {tab === 'pending' ? (
               <>
-                Generate a draft from the Backlog screen, or run <code className="t-number text-[13px]">npm run draft -- prompt-caching</code> in your terminal.
+                <span className="block">Pick a topic and write one. It takes about three minutes.</span>
+                <Link href="/backlog" className="btn btn-primary btn-sm mt-4">
+                  Browse topics
+                </Link>
               </>
             ) : (
               <>Drafts you {tab === 'rejected' ? 'reject' : tab} will appear here.</>
@@ -206,6 +218,7 @@ export default function ReviewPage() {
 function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Promise<string | void>) => Promise<void> }) {
   const { draft, concept, research, previous, publication } = detail;
   const { session } = useSession();
+  const dialog = useDialog();
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState(draft.body);
   const [readToEnd, setReadToEnd] = useState(false);
@@ -553,12 +566,20 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                 <ActionButton
                   className="btn btn-danger w-full"
                   pendingLabel="Rejecting…"
-                  onClick={() => {
-                    const reason = window.prompt('Why reject? This becomes the concept note.');
+                  onClick={async () => {
+                    const reason = await dialog.prompt({
+                      title: 'Reject this draft?',
+                      body: 'The topic goes back to your list so you can try again. Your note is saved with it.',
+                      label: 'Why are you rejecting it?',
+                      placeholder: 'e.g. the mechanism is not explained deeply enough',
+                      confirmLabel: 'Reject draft',
+                      danger: true,
+                      multiline: true,
+                    });
                     if (reason === null) return;
                     return run(async () => {
                       await sendJson(`/api/drafts/${draft._id}`, 'PATCH', { status: 'rejected', reason });
-                      return 'Rejected. The concept is back in the backlog.';
+                      return 'Rejected. The topic is back in your list.';
                     });
                   }}
                 >

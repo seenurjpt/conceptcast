@@ -37,7 +37,7 @@ export async function runCritic(input: CriticInput): Promise<Critique> {
     stage: 'critic',
     model: MODELS.heavy,
     system: buildSystem(['critic', 'rubric.v2'], input.voice),
-    maxTokens: 6_000,
+    maxTokens: 16_000,
     messages: [
       {
         role: 'user',

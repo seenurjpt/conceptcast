@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getJson, sendJson } from '@/lib/ui';
+import { WritingProgress } from '@/components/WritingProgress';
 import {
   ActionButton,
   Card,
@@ -13,7 +15,21 @@ import {
   TrackBadge,
 } from '@/components/ui';
 
-const TRACKS = ['model-internals', 'retrieval', 'agents', 'production', 'evals', 'adaptation', 'security'] as const;
+const TRACKS = ['coding-agents', 'workflow', 'codegen-quality', 'tooling', 'team-practice', 'economics', 'risk'] as const;
+
+/** "3d old" style age for news topics; null when there is no story date. */
+function storyAge(d: string | null | undefined): string | null {
+  if (!d) return null;
+  const days = Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000);
+  return days <= 0 ? 'today' : `${days}d old`;
+}
+
+function expiresIn(d: string | null | undefined): string | null {
+  if (!d) return null;
+  const hours = Math.round((new Date(d).getTime() - Date.now()) / 3_600_000);
+  if (hours <= 0) return 'expiring';
+  return hours < 48 ? `expires in ${hours}h` : `expires in ${Math.round(hours / 24)}d`;
+}
 type StatusFilter = 'backlog' | 'selected' | 'published' | 'retired' | 'all';
 
 interface Concept {
@@ -30,6 +46,8 @@ interface Concept {
   status: string;
   note: string | null;
   primarySources: { type: string; url: string; title: string }[];
+  origin?: 'seed' | 'proposal' | 'news';
+  storyDate?: string | null;
 }
 interface Proposal {
   _id: string;
@@ -40,6 +58,15 @@ interface Proposal {
   prerequisites: string[];
   rationale: string;
   primarySources: { type: string; url: string; title: string }[];
+  source?: 'model' | 'news';
+  story?: {
+    headline: string;
+    links: { url: string; title: string; feed: string; publishedAt: string | null }[];
+    newestAt: string | null;
+    clusterSize: number;
+    score: number;
+  } | null;
+  expiresAt?: string | null;
 }
 interface Ranking {
   slug: string;
@@ -119,54 +146,33 @@ export default function BacklogPage() {
     () => concepts.filter((c) => c.status === 'backlog' && c.prerequisites.every((p) => publishedSlugs.has(p))).length,
     [concepts, publishedSlugs],
   );
-  // At the spec's two posts a week. Counts the whole backlog: prerequisites
-  // unlock as you publish, so a blocked concept is delayed, not lost.
-  const weeksLeft = Math.floor((counts.backlog ?? 0) / 2);
 
   return (
     <>
       <PageHeader
-        title="Backlog"
-        subtitle="Prerequisites turn a list of posts into a curriculum. A concept becomes eligible once everything it builds on is published."
+        title="Topics"
+        subtitle="Pick one and generate a post. Research, drafting and critique take about three minutes; the draft then waits for your review."
         actions={
-          <>
-            <ActionButton
-              className="btn"
-              pendingLabel="Ranking…"
-              onClick={() =>
-                run(async () => {
-                  const r = await sendJson<{ ranked: Ranking[]; eligible: number; chosen: string | null }>(
-                    '/api/pipeline/run',
-                    'POST',
-                    { dryRun: true },
-                  );
-                  setRanking(r.ranked);
-                  return `${r.eligible} eligible. The selector would pick ${r.chosen ?? 'nothing'}.`;
-                })
-              }
-            >
-              Preview selector
-            </ActionButton>
-            <ActionButton
-              className="btn btn-primary"
-              pendingLabel="Running…"
-              confirm="Run the full pipeline now? Research, writing and critique take a few minutes and spend tokens."
-              onClick={() =>
-                run(async () => {
-                  const r = await sendJson<{ chosen: string | null; generated: { status: string; score: number } | null; queued?: boolean }>(
-                    '/api/pipeline/run',
-                    'POST',
-                    {},
-                  );
-                  if (r.queued) return `Queued ${r.chosen} for generation.`;
-                  if (!r.generated) return 'Nothing is eligible right now.';
-                  return `${r.chosen}: ${r.generated.status}, scored ${r.generated.score}. See the review queue.`;
-                })
-              }
-            >
-              Run pipeline
-            </ActionButton>
-          </>
+          <ActionButton
+            className="btn"
+            pendingLabel="Thinking…"
+            title="Score the eligible topics on teachability, surprise and applicability"
+            onClick={() =>
+              run(async () => {
+                const r = await sendJson<{ ranked: Ranking[]; eligible: number; chosen: string | null }>(
+                  '/api/pipeline/run',
+                  'POST',
+                  { dryRun: true },
+                );
+                setRanking(r.ranked);
+                return r.chosen
+                  ? `Ranked ${r.eligible} topics. Best pick right now: ${r.chosen}.`
+                  : 'Nothing is eligible yet.';
+              })
+            }
+          >
+            Suggest a topic
+          </ActionButton>
         }
       />
 
@@ -177,23 +183,23 @@ export default function BacklogPage() {
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
-          <Stat label="In backlog" value={counts.backlog ?? 0} />
+          <Stat label="Topics left" value={counts.backlog ?? 0} />
         </Card>
         <Card>
-          <Stat label="Ready now" value={ready} />
+          <Stat label="Ready to write" value={ready} />
+        </Card>
+        <Card>
+          <Stat label="Drafted" value={(counts.selected ?? 0) + (counts.published ?? 0)} />
         </Card>
         <Card>
           <Stat label="Published" value={counts.published ?? 0} tone={counts.published ? 'up' : undefined} />
-        </Card>
-        <Card>
-          <Stat label="Weeks at 2 a week" value={weeksLeft} />
         </Card>
       </div>
 
       {ranking && (
         <Card
           className="mt-4"
-          title="Selector ranking"
+          title="Suggested topics"
           action={
             <button className="btn-text text-[13px]" onClick={() => setRanking(null)}>
               Close
@@ -233,26 +239,57 @@ export default function BacklogPage() {
       )}
 
       {proposals.length > 0 && (
-        <Card className="mt-4" title={`Proposed concepts · ${proposals.length} awaiting you`}>
+        <Card
+          className="mt-4"
+          title={
+            proposals.some((p) => p.source === 'news')
+              ? `From the news · ${proposals.filter((p) => p.source === 'news').length} awaiting you`
+              : `Proposed concepts · ${proposals.length} awaiting you`
+          }
+          action={
+            proposals.some((p) => p.source === 'news') && (
+              <span className="t-caption text-muted">Scanned daily at 07:00. Unaccepted stories expire in a few days.</span>
+            )
+          }
+        >
           <ul className="row-list">
-            {proposals.map((p) => (
+            {[...proposals].sort((a, b) => (a.source === 'news' ? 0 : 1) - (b.source === 'news' ? 0 : 1)).map((p) => (
               <li key={p._id} className="row flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="t-title-sm">{p.title}</span>
                     <TrackBadge track={p.track} />
-                    <span className="t-caption text-muted">{p.slug}</span>
+                    {p.source === 'news' && <span className="badge badge-attention">news</span>}
+                    {p.source === 'news' && storyAge(p.story?.newestAt) && (
+                      <span className="t-caption text-muted">{storyAge(p.story?.newestAt)}</span>
+                    )}
+                    {p.source === 'news' && expiresIn(p.expiresAt) && (
+                      <span className="t-caption text-muted">· {expiresIn(p.expiresAt)}</span>
+                    )}
+                    {p.source !== 'news' && <span className="t-caption text-muted">{p.slug}</span>}
                   </div>
                   <p className="t-body-sm mt-0.5 text-body">{p.oneLiner}</p>
                   <p className="t-caption mt-1 text-muted">{p.rationale}</p>
-                  <div className="t-caption mt-1 flex flex-wrap gap-x-3 text-muted">
-                    <span>Prerequisites: {p.prerequisites.join(', ') || 'none'}</span>
-                    {p.primarySources.map((s, i) => (
-                      <a key={i} className="text-primary" href={s.url} target="_blank" rel="noreferrer">
-                        {s.type}
-                      </a>
-                    ))}
-                  </div>
+                  {p.source === 'news' && p.story ? (
+                    <ul className="t-caption mt-1 space-y-0.5 text-muted">
+                      {p.story.links.slice(0, 4).map((l, i) => (
+                        <li key={i} className="truncate">
+                          <a className="text-primary hover:underline" href={l.url} target="_blank" rel="noreferrer" title={l.url}>
+                            {l.title}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="t-caption mt-1 flex flex-wrap gap-x-3 text-muted">
+                      <span>Prerequisites: {p.prerequisites.join(', ') || 'none'}</span>
+                      {p.primarySources.map((s, i) => (
+                        <a key={i} className="text-primary" href={s.url} target="_blank" rel="noreferrer">
+                          {s.type}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <ActionButton
@@ -330,8 +367,24 @@ export default function BacklogPage() {
           </button>
           <ActionButton
             className="btn btn-quiet btn-sm"
+            pendingLabel="Scanning…"
+            onClick={() =>
+              run(async () => {
+                const r = await sendJson<{ onBeat: number; clusters: number; proposed: unknown[]; dropped: unknown[] }>('/api/news/scan', 'POST');
+                return `${r.onBeat} stories on the beat, ${r.clusters} clusters, ${r.proposed.length} proposed above.`;
+              })
+            }
+          >
+            Scan the news
+          </ActionButton>
+          <ActionButton
+            className="btn btn-quiet btn-sm"
             pendingLabel="Proposing…"
-            confirm="Ask the model to propose 10 new concepts? One Sonnet call with web search."
+            confirm={{
+              title: "Propose 10 new topics?",
+              body: "One Sonnet call with web search, about $0.10. Proposals appear above for you to accept or reject.",
+              confirmLabel: "Propose",
+            }}
             onClick={() =>
               run(async () => {
                 const r = await sendJson<{ proposals: Proposal[] }>('/api/proposals', 'POST');
@@ -378,13 +431,16 @@ function ConceptRow({
   publishedSlugs: Set<string>;
   run: (fn: () => Promise<string | void>) => Promise<void>;
 }) {
+  const router = useRouter();
   const [rel, setRel] = useState(String(c.devRelevance));
+  /** Epoch ms when a run started from this row; null when idle. Drives the progress view. */
+  const [writingSince, setWritingSince] = useState<number | null>(null);
   useEffect(() => setRel(String(c.devRelevance)), [c.devRelevance]);
   const unmet = c.prerequisites.filter((p) => !publishedSlugs.has(p));
   const eligible = c.status === 'backlog' && unmet.length === 0;
 
   return (
-    <li className="row flex flex-wrap items-start gap-4">
+    <li className={`row flex flex-wrap items-start gap-4${writingSince ? ' writing-row' : ''}`}>
       <div className="min-w-[240px] flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="t-title-sm">{c.title}</span>
@@ -392,6 +448,11 @@ function ConceptRow({
           {c.status !== 'backlog' && (
             <span className={`badge ${c.status === 'published' ? 'badge-up' : c.status === 'selected' ? 'badge-primary' : 'badge-quiet'}`}>
               {c.status}
+            </span>
+          )}
+          {c.origin === 'news' && (
+            <span className="badge badge-attention" title={c.note ?? undefined}>
+              news{storyAge(c.storyDate) ? ` · ${storyAge(c.storyDate)}` : ''}
             </span>
           )}
           {c.timelinessBoost > 0 && <span className="badge badge-attention">in the news +{c.timelinessBoost}</span>}
@@ -415,14 +476,14 @@ function ConceptRow({
       <div className="flex shrink-0 items-center gap-2">
         <input
           id={`rel-${c.slug}`}
-          className="input t-number h-8 w-14 px-2 text-center text-[13px]"
+          className="input t-number h-8 w-14 px-2 text-center text-[13px] text-muted"
           type="number"
           min={0}
           max={10}
           step={0.5}
           value={rel}
-          title="Developer relevance, 0 to 10 — weights the selector"
-          aria-label={`Relevance for ${c.title}`}
+          title={`How relevant "${c.title}" is to your audience, 0 to 10. Used when suggesting a topic.`}
+          aria-label={`Relevance for ${c.title}, 0 to 10`}
           onChange={(e) => setRel(e.target.value)}
           onBlur={() => {
             const n = Number(rel);
@@ -434,25 +495,41 @@ function ConceptRow({
         />
         {c.status !== 'retired' && c.status !== 'published' && (
           <ActionButton
-            className="btn btn-sm"
-            pendingLabel="Generating…"
-            title={eligible ? 'Run the pipeline for this concept' : 'Prerequisites are unmet, but it will run anyway'}
-            confirm={`Generate a draft for "${c.title}"? Takes a few minutes and spends tokens.`}
-            onClick={() =>
-              run(async () => {
-                const r = await sendJson<{ queued: boolean; result?: { status: string; score: number } }>(
-                  `/api/concepts/${c.slug}/generate`,
-                  'POST',
-                  { force: c.status !== 'backlog' },
-                );
-                if (r.queued) return `Queued ${c.slug}.`;
-                return r.result?.status === 'pass'
-                  ? `${c.slug} scored ${r.result.score}. It is in the review queue.`
-                  : `${c.slug} scored ${r.result?.score} and was killed. It is back in the backlog.`;
-              })
+            className="btn btn-primary btn-sm"
+            pendingLabel="Writing…"
+            title={
+              eligible
+                ? 'Research, draft and critique this topic now'
+                : 'Its prerequisites are not published yet, but it will still run'
             }
+            confirm={{
+              title: `Write a post about "${c.title}"?`,
+              body: 'Research, drafting and critique take about three minutes and cost roughly $0.30 in tokens. The draft opens for review when it is done.',
+              confirmLabel: 'Write it',
+            }}
+            onClick={async () => {
+              setWritingSince(Date.now());
+              try {
+                await run(async () => {
+                  const r = await sendJson<{ queued: boolean; result?: { status: string; score: number; draftId: string } }>(
+                    `/api/concepts/${c.slug}/generate`,
+                    'POST',
+                    { force: c.status !== 'backlog' },
+                  );
+                  if (r.queued) return `Queued ${c.title}.`;
+                  if (r.result?.status === 'pass') {
+                    // Straight to the draft: the whole point was to read it.
+                    router.push(`/review?draft=${r.result.draftId}`);
+                    return `Drafted "${c.title}", scored ${r.result.score}/10.`;
+                  }
+                  return `"${c.title}" scored ${r.result?.score}/10 and did not pass the critic, so it was discarded. Try generating it again, or pick another topic.`;
+                });
+              } finally {
+                setWritingSince(null);
+              }
+            }}
           >
-            Generate
+            Write a post
           </ActionButton>
         )}
         {c.status === 'backlog' && (
@@ -478,6 +555,7 @@ function ConceptRow({
           </ActionButton>
         )}
       </div>
+      {writingSince !== null && <WritingProgress title={c.title} startedAt={writingSince} />}
     </li>
   );
 }
@@ -494,7 +572,7 @@ function AddConceptForm({
   const [form, setForm] = useState({
     slug: '',
     title: '',
-    track: 'production',
+    track: 'workflow',
     oneLiner: '',
     focus: '',
     prerequisites: '',

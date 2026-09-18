@@ -6,14 +6,17 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useSession } from './SessionProvider';
 import { LogoMark } from './Logo';
+import { useDialog } from './Modal';
 import { fmtDay } from '@/lib/ui';
 
+/** Ordered by the actual flow: pick a topic, review the draft, see what shipped. */
 const LINKS = [
-  { href: '/review', label: 'Review' },
-  { href: '/backlog', label: 'Backlog' },
-  { href: '/calendar', label: 'Calendar' },
+  { href: '/backlog', label: 'Topics' },
+  { href: '/review', label: 'Drafts' },
+  { href: '/calendar', label: 'Published' },
   { href: '/voice', label: 'Voice' },
   { href: '/analytics', label: 'Analytics' },
+  { href: '/admin/exemplars', label: 'Exemplars' },
 ];
 
 export function Nav() {
@@ -21,7 +24,7 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-30 border-b border-hairline bg-canvas/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-6 px-5">
-        <Link href="/review" className="flex shrink-0 items-center gap-2" aria-label="conceptcast home">
+        <Link href="/backlog" className="flex shrink-0 items-center gap-2" aria-label="conceptcast home">
           <LogoMark className="h-6 w-6 text-primary" />
           <span className="t-title-sm tracking-[-0.02em]">conceptcast</span>
         </Link>
@@ -99,7 +102,9 @@ function ThemeToggle() {
 
 function AccountMenu() {
   const { session, loading, signOut, signInHref } = useSession();
+  const dialog = useDialog();
   const [open, setOpen] = useState(false);
+  const [pictureFailed, setPictureFailed] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -146,13 +151,16 @@ function AccountMenu() {
         aria-haspopup="menu"
       >
         <span className="relative">
-          {member.picture ? (
+          {member.picture && !pictureFailed ? (
             <Image
               src={member.picture}
               alt=""
               width={32}
               height={32}
               className="avatar h-8 w-8 object-cover"
+              // LinkedIn CDN URLs are time-limited; fall back to initials
+              // rather than leaving an empty circle when one expires.
+              onError={() => setPictureFailed(true)}
               unoptimized
             />
           ) : (
@@ -172,9 +180,24 @@ function AccountMenu() {
           role="menu"
           className="absolute right-0 top-[calc(100%+8px)] w-72 overflow-hidden rounded-[16px] border border-hairline bg-surface-card shadow-[0_4px_12px_rgba(0,0,0,0.04)]"
         >
-          <div className="border-b border-hairline px-4 py-3">
-            <p className="t-title-sm truncate">{member.name ?? 'LinkedIn member'}</p>
-            <p className="t-caption truncate text-muted">{member.email ?? member.urn}</p>
+          <div className="flex items-center gap-3 border-b border-hairline px-4 py-3">
+            {member.picture && !pictureFailed ? (
+              <Image
+                src={member.picture}
+                alt=""
+                width={40}
+                height={40}
+                className="avatar h-10 w-10 shrink-0 object-cover"
+                onError={() => setPictureFailed(true)}
+                unoptimized
+              />
+            ) : (
+              <span className="avatar h-10 w-10 shrink-0 text-[14px]">{initials}</span>
+            )}
+            <div className="min-w-0">
+              <p className="t-title-sm truncate">{member.name ?? 'LinkedIn member'}</p>
+              <p className="t-caption truncate text-muted">{member.email ?? member.urn}</p>
+            </div>
           </div>
 
           <div className="space-y-1.5 border-b border-hairline px-4 py-3 text-[13px]">
@@ -197,9 +220,18 @@ function AccountMenu() {
             )}
             {session.source !== 'env' && (
               <button
-                className="btn btn-text mt-1 w-full justify-start px-2 py-1.5 text-[13px] text-down"
+                // .btn-text hard-codes the brand colour, so the danger tone is
+                // set inline rather than lost to specificity.
+                style={{ color: 'var(--down)' }}
+                className="btn btn-text mt-1 w-full justify-start px-2 py-1.5 text-[13px]"
                 onClick={async () => {
-                  if (!window.confirm('Sign out? Scheduled posts will not publish until you sign in again.')) return;
+                  const ok = await dialog.confirm({
+                    title: 'Sign out?',
+                    body: 'Your drafts and topics stay where they are. You will need to sign in with LinkedIn again before publishing.',
+                    confirmLabel: 'Sign out',
+                    danger: true,
+                  });
+                  if (!ok) return;
                   setOpen(false);
                   await signOut();
                   window.location.href = '/login';

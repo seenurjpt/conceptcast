@@ -20,7 +20,7 @@ import { buildSystem, researchBlock, type ConceptMeta } from './shared';
  */
 export function pickAngles(concept: Pick<ConceptMeta, 'track' | 'difficulty'>): Angle[] {
   const second: Angle =
-    concept.track === 'retrieval' || concept.track === 'agents' || concept.track === 'security'
+    concept.track === 'codegen-quality' || concept.track === 'risk' || concept.track === 'team-practice'
       ? 'misconception'
       : 'tradeoff';
   const other: Angle = second === 'misconception' ? 'tradeoff' : 'misconception';

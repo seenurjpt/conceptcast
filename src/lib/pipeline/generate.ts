@@ -279,6 +279,45 @@ export async function claimConcept(conceptId: Types.ObjectId | string): Promise<
   ).lean<ConceptDoc>();
 }
 
+/** A run that dies without throwing (request aborted, process killed) can leave
+ *  its concept claimed forever, which hides it from the backlog with nothing to
+ *  show for it. Anything claimed longer than this with no draft is presumed dead. */
+const STALE_CLAIM_MS = 20 * 60 * 1000;
+
+/**
+ * Releases concepts stuck in `selected` from an interrupted run. Safe to call
+ * on every backlog read: it only touches rows older than the cutoff that have
+ * produced no draft at all.
+ */
+export async function releaseStaleClaims(now = new Date()): Promise<number> {
+  const cutoff = new Date(now.getTime() - STALE_CLAIM_MS);
+  const stuck = await Concept.find({
+    status: 'selected',
+    coveredAt: { $ne: null, $lt: cutoff },
+  }).lean<ConceptDoc[]>();
+  if (stuck.length === 0) return 0;
+
+  // A concept with a draft is genuinely mid-review, not stranded.
+  const withDrafts = await Draft.find({ conceptId: { $in: stuck.map((c) => c._id) } }, { conceptId: 1 }).lean<
+    { conceptId: Types.ObjectId }[]
+  >();
+  const hasDraft = new Set(withDrafts.map((d) => String(d.conceptId)));
+  const orphans = stuck.filter((c) => !hasDraft.has(String(c._id)));
+  if (orphans.length === 0) return 0;
+
+  await Concept.updateMany(
+    { _id: { $in: orphans.map((c) => c._id) } },
+    {
+      $set: {
+        status: 'backlog',
+        coveredAt: null,
+        note: 'A previous run was interrupted before it produced a draft. Try again.',
+      },
+    },
+  );
+  return orphans.length;
+}
+
 /** After drafting: a dead draft returns the concept to the backlog with a note (spec §5.5). */
 export async function settleConcept(concept: ConceptDoc, result: DraftRunResult): Promise<void> {
   if (result.status === 'pass') return;

@@ -73,7 +73,13 @@ export async function acceptProposal(id: Types.ObjectId | string): Promise<Conce
     primarySources: p.primarySources,
     devRelevance: p.devRelevance,
     status: 'backlog',
-    note: dropped.length ? `Accepted from proposal; dropped unknown prerequisites: ${dropped.join(', ')}` : null,
+    origin: p.source === 'news' ? 'news' : 'proposal',
+    storyDate: p.story?.newestAt ?? null,
+    note: dropped.length
+      ? `Accepted from proposal; dropped unknown prerequisites: ${dropped.join(', ')}`
+      : p.source === 'news' && p.story
+        ? `From the news: ${p.story.headline}`
+        : null,
   });
   await ConceptProposal.updateOne({ _id: p._id }, { $set: { status: 'accepted' } });
   return concept.toObject() as ConceptDoc;

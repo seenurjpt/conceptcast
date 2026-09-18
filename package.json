@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test \"tests/**/*.test.ts\"",
+    "test": "vitest run",
+    "test:legacy": "node --import tsx --test \"tests/*.test.ts\"",
+    "seed:archetypes": "tsx scripts/seed-archetypes.ts",
+    "migrate:news-beat": "tsx scripts/migrate-news-beat.ts",
+    "news:scan": "tsx scripts/news-scan.ts",
     "seed": "tsx scripts/seed.ts",
     "draft": "tsx scripts/draft.ts",
     "select": "tsx scripts/select.ts",
@@ -38,6 +42,7 @@
     "mongodb-memory-server": "^11.2.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

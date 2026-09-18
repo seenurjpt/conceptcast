@@ -115,8 +115,22 @@ export async function callJson<S extends z.ZodType>(
     ...(opts.tools ? { tools: opts.tools } : {}),
   };
 
-  const first = await client.messages.create(params);
+  let first = await client.messages.create(params);
   logUsage(opts.stage, opts.model, first);
+
+  // A reply cut off by max_tokens can never parse; asking the model to
+  // "correct" it just truncates again. Re-run once with double the budget.
+  if (first.stop_reason === 'max_tokens') {
+    console.error(`  [${opts.stage}] hit max_tokens (${opts.maxTokens}); retrying with ${opts.maxTokens * 2}`);
+    params.max_tokens = opts.maxTokens * 2;
+    first = await client.messages.create(params);
+    logUsage(`${opts.stage}-untruncate`, opts.model, first);
+    if (first.stop_reason === 'max_tokens') {
+      throw new Error(
+        `[${opts.stage}] output truncated at ${params.max_tokens} tokens twice; raise maxTokens or shorten the prompt's requested output.`,
+      );
+    }
+  }
   const firstText = extractText(first);
 
   const attempt = (text: string): { ok: true; value: z.infer<S> } | { ok: false; error: string } => {

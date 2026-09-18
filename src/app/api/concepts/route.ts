@@ -3,11 +3,14 @@ import { handler, ok, readJson, HttpError } from '@/lib/api';
 import { Concept, type ConceptDoc } from '@/lib/db/models';
 import { TRACKS } from '@/lib/concepts/seed';
 import { validateDag } from '@/lib/concepts/dag';
+import { releaseStaleClaims } from '@/lib/pipeline/generate';
 
 export const dynamic = 'force-dynamic';
 
 /** GET /api/concepts?status=backlog&track=production */
 export const GET = handler(async (req: Request) => {
+  // Put back anything an interrupted run left claimed, so it is visible again.
+  await releaseStaleClaims();
   const url = new URL(req.url);
   const filter: Record<string, unknown> = {};
   const status = url.searchParams.get('status');

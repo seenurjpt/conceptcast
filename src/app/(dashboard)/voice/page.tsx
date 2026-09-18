@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getJson, sendJson, fmtRelative } from '@/lib/ui';
 import { ActionButton, Card, Notice, PageHeader } from '@/components/ui';
+import { VoiceSamplesCard } from '@/components/VoiceSamplesCard';
 
 interface Profile {
   styleGuide: string;
@@ -152,6 +153,18 @@ export default function VoicePage() {
               Save changes
             </ActionButton>
           </Card>
+
+          <VoiceSamplesCard
+            onMessage={(msg, kind) => {
+              if (kind === 'ok') {
+                setError(null);
+                setNotice(msg);
+              } else {
+                setNotice(null);
+                setError(msg);
+              }
+            }}
+          />
         </div>
       </div>
     </>

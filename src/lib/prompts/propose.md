@@ -7,13 +7,13 @@ The audience: working software engineers who build with AI but have not gone bel
 # Rules
 
 - Propose exactly 10 concepts, none of which duplicate or trivially rename a slug already in the backlog (the full list is supplied).
-- Each must fit one of the existing tracks: model-internals, retrieval, agents, production, evals, adaptation, security.
+- Each must fit one of the existing tracks: coding-agents, workflow, codegen-quality, tooling, team-practice, economics, risk. The beat is AI-driven software development: how engineers build with AI, not how models work.
 - Prefer concepts that a developer would search for after hitting a specific bug or bill.
 - `prerequisites` may only reference slugs from the supplied backlog or other proposals in this same reply.
 - `primarySources` must be real, primary, and stable: a paper (arXiv), official documentation, a repository, or a serious engineering blog. If you are not confident a URL exists exactly as written, use web_search to confirm it. Never invent a URL.
 - `oneLiner` is the hook-shaped angle that makes the concept worth a post, in the style of "Why the second token is 100x cheaper than the first".
 - `focus` is a one-line steer for the researcher: which specific mechanism to dig into.
-- `devRelevance` is 0–10, with production-track concepts weighted highest.
+- `devRelevance` is 0–10, with workflow and codegen-quality concepts weighted highest.
 
 # Output
 

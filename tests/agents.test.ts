@@ -8,11 +8,11 @@ import { extractHook, extractHashtags } from '../src/lib/pipeline/generate';
 import { engagementScore } from '../src/lib/feedback';
 
 test('pickAngles rotates by track and uses debug-story for difficulty 1', () => {
-  assert.deepEqual(pickAngles({ track: 'production', difficulty: 1 }), ['mechanism', 'tradeoff', 'debug-story']);
-  assert.deepEqual(pickAngles({ track: 'production', difficulty: 2 }), ['mechanism', 'tradeoff', 'misconception']);
-  assert.deepEqual(pickAngles({ track: 'retrieval', difficulty: 2 }), ['mechanism', 'misconception', 'tradeoff']);
-  assert.deepEqual(pickAngles({ track: 'agents', difficulty: 1 }), ['mechanism', 'misconception', 'debug-story']);
-  for (const track of ['model-internals', 'evals', 'adaptation', 'security']) {
+  assert.deepEqual(pickAngles({ track: 'workflow', difficulty: 1 }), ['mechanism', 'tradeoff', 'debug-story']);
+  assert.deepEqual(pickAngles({ track: 'workflow', difficulty: 2 }), ['mechanism', 'tradeoff', 'misconception']);
+  assert.deepEqual(pickAngles({ track: 'codegen-quality', difficulty: 2 }), ['mechanism', 'misconception', 'tradeoff']);
+  assert.deepEqual(pickAngles({ track: 'risk', difficulty: 1 }), ['mechanism', 'misconception', 'debug-story']);
+  for (const track of ['coding-agents', 'tooling', 'economics', 'team-practice']) {
     const angles = pickAngles({ track, difficulty: 3 });
     assert.equal(angles.length, 3);
     assert.equal(new Set(angles).size, 3);

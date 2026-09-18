@@ -13,14 +13,14 @@ interface Node {
   human?: boolean;
 }
 
+/** You are at both ends: you choose the topic, and you approve the post. */
 const ROW_ONE: Node[] = [
-  { label: 'Backlog', sub: '63 concepts' },
-  { label: 'Select', sub: 'Haiku' },
-  { label: 'Research', sub: 'Sonnet + search' },
+  { label: 'You', sub: 'pick a topic', human: true },
+  { label: 'Research', sub: 'primary sources' },
+  { label: 'Write', sub: '3 angles' },
 ];
 
 const ROW_TWO: Node[] = [
-  { label: 'Write', sub: '3 angles' },
   { label: 'Critique', sub: 'depth rubric' },
   { label: 'You', sub: 'approve', human: true },
   { label: 'LinkedIn', sub: 'publish' },
@@ -57,14 +57,26 @@ function Chip({ n }: { n: Node }) {
 function Row({ nodes, trailing }: { nodes: Node[]; trailing?: boolean }) {
   return (
     <li className="flex w-max items-center">
+      {/* Keyed by label + sub: "You" appears at both ends, so the label alone is not unique. */}
       {nodes.map((n, i) => (
-        <div key={n.label} className="flex items-center">
+        <div key={`${n.label}-${n.sub}`} className="flex items-center">
           {i > 0 && <Arrow className="px-1" />}
           <Chip n={n} />
         </div>
       ))}
-      {/* Marks the hand-off to the next row. */}
-      {trailing && <Arrow className="px-1 opacity-60" />}
+      {/* Hands off to the next row: turns down rather than pointing at nothing. */}
+      {trailing && (
+        <svg width="20" height="14" viewBox="0 0 20 14" fill="none" aria-hidden className="shrink-0 px-1">
+          <path
+            d="M2 3h9a3 3 0 0 1 3 3v2M11 5.5L14 8.5 17 5.5"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-white/25"
+          />
+        </svg>
+      )}
     </li>
   );
 }
@@ -79,7 +91,7 @@ export function PipelineDiagram() {
         <Row nodes={ROW_TWO} />
       </ol>
       <figcaption className="mt-3 text-[12px] text-white/40">
-        Engagement from published posts feeds back into which concept gets picked next.
+        About three minutes from picking a topic to a draft you can read.
       </figcaption>
     </figure>
   );

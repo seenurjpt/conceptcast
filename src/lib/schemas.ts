@@ -162,3 +162,26 @@ export const ProposalOutputSchema = z.object({
     .min(1),
 });
 export type ProposalOutput = z.infer<typeof ProposalOutputSchema>;
+
+/* ── news → proposals (daily scan) ────────────────────────────────────────── */
+
+export const NewsProposeOutputSchema = z.object({
+  topics: z
+    .array(
+      z.object({
+        clusterIndex: z.number().int().min(0),
+        keep: z.boolean(),
+        slug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        title: z.string(),
+        track: z.string(),
+        oneLiner: z.string(),
+        focus: z.string(),
+        difficulty: z.number().int().min(1).max(3),
+        devRelevance: z.number().min(0).max(10),
+        score: z.number().min(0).max(10),
+        rationale: z.string(),
+      }),
+    )
+    .min(1),
+});
+export type NewsProposeOutput = z.infer<typeof NewsProposeOutputSchema>;

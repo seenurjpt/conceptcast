@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useDialog, type ConfirmOptions } from './Modal';
 
 /* ── page scaffolding ─────────────────────────────────────────────────────── */
 
@@ -140,8 +141,10 @@ export function ActionButton({
   className?: string;
   disabled?: boolean;
   title?: string;
-  confirm?: string;
+  /** Shows a confirmation dialog first. A bare string becomes the title. */
+  confirm?: string | ConfirmOptions;
 }) {
+  const dialog = useDialog();
   const [pending, setPending] = useState(false);
   useEffect(() => () => setPending(false), []);
   return (
@@ -150,7 +153,10 @@ export function ActionButton({
       disabled={disabled || pending}
       title={title}
       onClick={async () => {
-        if (confirm && !window.confirm(confirm)) return;
+        if (confirm) {
+          const opts = typeof confirm === 'string' ? { title: confirm } : confirm;
+          if (!(await dialog.confirm(opts))) return;
+        }
         setPending(true);
         try {
           await onClick();

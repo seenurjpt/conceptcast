@@ -237,6 +237,15 @@ body {
 .btn-danger:active:not(:disabled) {
   background: color-mix(in srgb, var(--down) 10%, transparent);
 }
+/* Filled variant: the confirm button of a destructive dialog, where the
+   outlined version reads as secondary next to a solid Cancel. */
+.btn-danger-solid {
+  background: var(--down);
+  color: #ffffff;
+}
+.btn-danger-solid:active:not(:disabled) {
+  background: color-mix(in srgb, var(--down) 85%, #000);
+}
 .btn-text {
   height: auto;
   padding: 0;
@@ -471,4 +480,157 @@ select.input {
   font-size: 12px;
   font-weight: 600;
   overflow: hidden;
+}
+
+/* AI-driven-development tracks (the model-internals tints above stay for retired rows). */
+.track-coding-agents {
+  --track: #ea580c;
+}
+.track-workflow {
+  --track: var(--primary);
+}
+.track-codegen-quality {
+  --track: #0d9488;
+}
+.track-tooling {
+  --track: #8b5cf6;
+}
+.track-team-practice {
+  --track: #65a30d;
+}
+.track-economics {
+  --track: #db2777;
+}
+.track-risk {
+  --track: #cf202f;
+}
+:root[data-theme='dark'] .track-coding-agents {
+  --track: #fb923c;
+}
+:root[data-theme='dark'] .track-codegen-quality {
+  --track: #2dd4bf;
+}
+:root[data-theme='dark'] .track-tooling {
+  --track: #a78bfa;
+}
+:root[data-theme='dark'] .track-team-practice {
+  --track: #a3e635;
+}
+:root[data-theme='dark'] .track-economics {
+  --track: #f472b6;
+}
+:root[data-theme='dark'] .track-risk {
+  --track: #ff6b6b;
+}
+
+/* ── writing progress (in-flight pipeline run) ────────────────────────────── */
+
+.writing {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface-card));
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* The orb: a breathing dot with an expanding ring, the "something is thinking" cue. */
+.writing-orb {
+  position: relative;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 100px;
+  background: var(--primary);
+  animation: writing-breathe 1.6s ease-in-out infinite;
+}
+.writing-orb::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 100px;
+  border: 1.5px solid var(--primary);
+  opacity: 0;
+  animation: writing-ring 1.6s ease-out infinite;
+}
+@keyframes writing-breathe {
+  0%, 100% { transform: scale(0.85); opacity: 0.75; }
+  50% { transform: scale(1); opacity: 1; }
+}
+@keyframes writing-ring {
+  0% { transform: scale(0.6); opacity: 0.6; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* The bar: eased fill from elapsed time, with a light sweep so it reads as alive even when the width is still. */
+.writing-bar {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 100px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+.writing-bar-fill {
+  position: relative;
+  height: 100%;
+  border-radius: 100px;
+  background: var(--primary);
+  transition: width 1s linear;
+}
+.writing-bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, white 55%, transparent) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: writing-sweep 1.8s ease-in-out infinite;
+}
+@keyframes writing-sweep {
+  to { transform: translateX(100%); }
+}
+
+/* Stage dots: done = filled with a check, active = pulsing ring, todo = hairline. */
+.writing-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 100px;
+  border: 1.5px solid var(--hairline);
+  color: var(--on-primary);
+}
+.writing-stage-todo { color: var(--muted-soft); }
+.writing-stage-active { color: var(--ink); }
+.writing-stage-active .writing-dot {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 45%, transparent);
+  animation: writing-pulse 1.6s ease-out infinite;
+}
+.writing-stage-done { color: var(--muted); }
+.writing-stage-done .writing-dot {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+@keyframes writing-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 45%, transparent); }
+  100% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--primary) 0%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .writing-orb,
+  .writing-orb::after,
+  .writing-bar-fill::after,
+  .writing-stage-active .writing-dot {
+    animation: none;
+  }
+  .writing-orb::after { display: none; }
+}
+
+/* A row with a run in flight gets a faint tint so the eye lands on it in a long list. */
+.writing-row {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 4%, transparent), transparent 60%);
+  margin-inline: -20px;
+  padding-inline: 20px;
+  border-radius: var(--radius-sm);
 }

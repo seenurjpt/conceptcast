@@ -4,6 +4,9 @@ import { fetchMetrics } from './fetch-metrics';
 import { refreshToken } from './refresh-token';
 import { scanTimelinessFn } from './scan-timeliness';
 import { growBacklog } from './grow-backlog';
+import { generatePostPipeline } from './generate-post-pipeline';
+import { voiceExtract } from './voice-extract';
+import { scanNews } from './scan-news';
 
 export const functions = [
   generatePost,
@@ -12,4 +15,7 @@ export const functions = [
   refreshToken,
   scanTimelinessFn,
   growBacklog,
+  generatePostPipeline,
+  voiceExtract,
+  scanNews,
 ];
