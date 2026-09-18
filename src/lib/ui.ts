@@ -1,7 +1,17 @@
 /** Client-side helpers for the dashboard screens. */
 
+/** A 401 means the session lapsed; send the user to the front door, keeping their place. */
+function handleUnauthorized(): never {
+  if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+    const next = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.href = `/login?next=${next}`;
+  }
+  throw new Error('Signed out. Redirecting to sign in…');
+}
+
 export async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { cache: 'no-store' });
+  if (res.status === 401) handleUnauthorized();
   const json = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new Error(json.error ?? `${res.status} ${res.statusText}`);
   return json;
@@ -13,6 +23,7 @@ export async function sendJson<T>(url: string, method: 'POST' | 'PATCH' | 'PUT' 
     headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  if (res.status === 401) handleUnauthorized();
   const json = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new Error(json.error ?? `${res.status} ${res.statusText}`);
   return json;
@@ -36,19 +47,26 @@ export function toLocalInput(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export const TRACK_COLOURS: Record<string, string> = {
-  'model-internals': 'bg-purple-500/15 text-purple-700 dark:text-purple-300',
-  retrieval: 'bg-teal-500/15 text-teal-700 dark:text-teal-300',
-  agents: 'bg-orange-500/15 text-orange-700 dark:text-orange-300',
-  production: 'bg-blue-500/15 text-blue-700 dark:text-blue-300',
-  evals: 'bg-pink-500/15 text-pink-700 dark:text-pink-300',
-  adaptation: 'bg-lime-500/15 text-lime-700 dark:text-lime-300',
-  security: 'bg-red-500/15 text-red-700 dark:text-red-300',
-};
-
-export function trackClass(track: string): string {
-  return TRACK_COLOURS[track] ?? 'bg-stone-500/15';
-}
-
 /** The LinkedIn fold: roughly the first 210 characters. */
 export const LINKEDIN_FOLD = 210;
+
+/** "3 days ago" / "in 2 hours" — kinder than a timestamp for recency. */
+export function fmtRelative(d: string | Date | null | undefined): string {
+  if (!d) return '—';
+  const date = typeof d === 'string' ? new Date(d) : d;
+  const diff = date.getTime() - Date.now();
+  const abs = Math.abs(diff);
+  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ['minute', 60_000],
+    ['hour', 3_600_000],
+    ['day', 86_400_000],
+    ['week', 604_800_000],
+    ['month', 2_629_800_000],
+    ['year', 31_557_600_000],
+  ];
+  if (abs < 60_000) return 'just now';
+  let chosen: [Intl.RelativeTimeFormatUnit, number] = units[0];
+  for (const u of units) if (abs >= u[1]) chosen = u;
+  return rtf.format(Math.round(diff / chosen[1]), chosen[0]);
+}

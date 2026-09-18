@@ -277,8 +277,10 @@ export interface VoiceProfileDoc {
 
 const VoiceProfileSchema = new Schema<VoiceProfileDoc>({
   key: { type: String, required: true, unique: true, default: 'singleton' },
-  styleGuide: { type: String, required: true, default: '' },
-  audienceDescription: { type: String, required: true, default: DEFAULT_AUDIENCE },
+  // Not `required`: an empty style guide is the legitimate pre-bootstrap state,
+  // and Mongoose treats '' as missing, which would reject the default profile.
+  styleGuide: { type: String, default: '' },
+  audienceDescription: { type: String, default: DEFAULT_AUDIENCE },
   examplePosts: { type: [String], required: true, default: [] },
   updatedAt: { type: Date, required: true, default: () => new Date() },
 });
@@ -296,6 +298,8 @@ export interface LinkedInAuthDoc {
   refreshExpiresAt: Date | null;
   memberUrn: string;
   memberName: string | null;
+  memberPicture: string | null;
+  memberEmail: string | null;
   scopes: string[];
   updatedAt: Date;
 }
@@ -308,6 +312,8 @@ const LinkedInAuthSchema = new Schema<LinkedInAuthDoc>({
   refreshExpiresAt: { type: Date, default: null },
   memberUrn: { type: String, required: true },
   memberName: { type: String, default: null },
+  memberPicture: { type: String, default: null },
+  memberEmail: { type: String, default: null },
   scopes: { type: [String], required: true, default: [] },
   updatedAt: { type: Date, required: true, default: () => new Date() },
 });

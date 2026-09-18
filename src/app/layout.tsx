@@ -1,24 +1,29 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
-import { Nav } from '@/components/Nav';
-import { LinkedInBanner } from '@/components/LinkedInBanner';
+import { SessionProvider } from '@/components/SessionProvider';
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
-const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
+// DESIGN.md documents these as the substitutes for the licensed Coinbase faces.
+const inter = Inter({ variable: '--font-inter', subsets: ['latin'] });
+const mono = JetBrains_Mono({ variable: '--font-mono-face', subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'conceptcast',
-  description: 'AI concept agent: research, draft, review, publish.',
+  description: 'Research, draft, review and publish technical explainers.',
 };
+
+/** Applies the stored theme before first paint so there is no flash. */
+const THEME_SCRIPT = `try{var t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t}catch(e){}`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <Nav />
-        <LinkedInBanner />
-        <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
+      <body className={`${inter.variable} ${mono.variable} font-sans`}>
+        {/* The login screen has no nav, so chrome lives in the (dashboard) group. */}
+        <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   );

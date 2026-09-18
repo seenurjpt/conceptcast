@@ -104,17 +104,30 @@ export function refreshTokens(refreshToken: string): Promise<TokenResponse> {
   return tokenRequest({ grant_type: 'refresh_token', refresh_token: refreshToken });
 }
 
-export async function fetchUserInfo(accessToken: string): Promise<{ sub: string; name: string | null }> {
+export interface LinkedInUserInfo {
+  sub: string;
+  name: string | null;
+  picture: string | null;
+  email: string | null;
+}
+
+/** OpenID Connect userinfo — this is the "sign in" half of the flow. */
+export async function fetchUserInfo(accessToken: string): Promise<LinkedInUserInfo> {
   const res = await fetch(USERINFO_URL, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!res.ok) throw new Error(`LinkedIn userinfo ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const json = (await res.json()) as { sub: string; name?: string };
-  return { sub: json.sub, name: json.name ?? null };
+  const json = (await res.json()) as { sub: string; name?: string; picture?: string; email?: string };
+  return {
+    sub: json.sub,
+    name: json.name ?? null,
+    picture: json.picture ?? null,
+    email: json.email ?? null,
+  };
 }
 
 /** Persist a token response as the singleton auth row. */
 export async function storeTokens(
   tokens: TokenResponse,
-  member: { urn: string; name: string | null },
+  member: { urn: string; name: string | null; picture?: string | null; email?: string | null },
 ): Promise<LinkedInAuthDoc> {
   const now = Date.now();
   const existing = await LinkedInAuth.findOne({ key: 'singleton' }).lean<LinkedInAuthDoc>();
@@ -130,6 +143,8 @@ export async function storeTokens(
           : (existing?.refreshExpiresAt ?? null),
         memberUrn: member.urn,
         memberName: member.name,
+        memberPicture: member.picture ?? existing?.memberPicture ?? null,
+        memberEmail: member.email ?? existing?.memberEmail ?? null,
         scopes: tokens.scope ? tokens.scope.split(/[ ,]+/) : (existing?.scopes ?? requestedScopes()),
         updatedAt: new Date(),
       },
@@ -161,6 +176,8 @@ export async function getAuth(): Promise<LinkedInAuthDoc | null> {
       refreshExpiresAt: null,
       memberUrn: urn,
       memberName: null,
+      memberPicture: null,
+      memberEmail: null,
       scopes: DEFAULT_SCOPES,
       updatedAt: new Date(),
     } as LinkedInAuthDoc;

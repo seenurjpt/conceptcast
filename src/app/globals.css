@@ -1,76 +1,474 @@
 @import "tailwindcss";
 
+/*
+ * Tokens follow DESIGN.md (Coinbase-derived). That document covers marketing
+ * surfaces; conceptcast is a dense internal tool, so we take the token system
+ * and the in-product patterns (asset row, badge pill, text input, pill buttons)
+ * and leave the 80px display heroes and 96px section bands out.
+ *
+ * Light is the canonical palette. Dark re-maps the same token names.
+ */
+
 :root {
-  --background: #fafaf9;
-  --foreground: #1c1917;
-  --muted: #78716c;
-  --border: #e7e5e4;
-  --panel: #ffffff;
-  --accent: #0a66c2;
-  --accent-soft: #e8f0fb;
-  --danger: #b91c1c;
-  --ok: #15803d;
-  --warn: #b45309;
+  /* brand: the single action colour, used scarcely */
+  --primary: #0052ff;
+  --primary-active: #003ecc;
+  --primary-disabled: #a8b8cc;
+  --on-primary: #ffffff;
+
+  /* surface */
+  --canvas: #ffffff;
+  --surface-soft: #f7f7f7;
+  --surface-card: #ffffff;
+  --surface-strong: #eef0f3;
+  --surface-dark: #0a0b0d;
+  --surface-dark-elevated: #16181c;
+
+  /* hairlines */
+  --hairline: #dee1e6;
+  --hairline-soft: #eef0f3;
+
+  /*
+   * text — DESIGN.md's muted (#7c828a) lands at 3.88:1 on white, below WCAG AA
+   * for body text, so it is darkened here. Same for the trading green, which is
+   * 2.80:1 on white: it stays the brand green on dark, and darkens on light.
+   */
+  --ink: #0a0b0d;
+  --body: #5b616e;
+  --muted: #676d74;
+  --muted-soft: #85898f;
+
+  /* semantics: text colour only, never a button background */
+  --up: #027a49;
+  --down: #cf202f;
+  --attention: #8a6300;
+
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+:root[data-theme='dark'] {
+  --primary: #4d8bff;
+  --primary-active: #6ba0ff;
+  --primary-disabled: #2c3c57;
+  --on-primary: #06080d;
+
+  --canvas: #0a0b0d;
+  --surface-soft: #101215;
+  --surface-card: #16181c;
+  --surface-strong: #1f2228;
+  --surface-dark: #000000;
+  --surface-dark-elevated: #16181c;
+
+  --hairline: #26292f;
+  --hairline-soft: #1c1f24;
+
+  --ink: #ffffff;
+  --body: #a8acb3;
+  --muted: #868c94;
+  --muted-soft: #6b7178;
+
+  --up: #05b169;
+  --down: #ff6b6b;
+  --attention: #f4b000;
+
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/*
+ * The login hero is always dark. In light mode that is the contrast; in dark
+ * mode it must still separate from the page, so it goes a step darker than the
+ * canvas rather than matching it.
+ */
+:root {
+  --hero: #0a0b0d;
+}
+:root[data-theme='dark'] {
+  --hero: #000000;
+  --canvas: #0e1013;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-active: var(--primary-active);
+  --color-primary-disabled: var(--primary-disabled);
+  --color-on-primary: var(--on-primary);
+  --color-canvas: var(--canvas);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-card: var(--surface-card);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-dark: var(--surface-dark);
+  --color-hero: var(--hero);
+  --color-surface-dark-elevated: var(--surface-dark-elevated);
+  --color-hairline: var(--hairline);
+  --color-hairline-soft: var(--hairline-soft);
+  --color-ink: var(--ink);
+  --color-body: var(--body);
   --color-muted: var(--muted);
-  --color-border: var(--border);
-  --color-panel: var(--panel);
-  --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
-  --color-danger: var(--danger);
-  --color-ok: var(--ok);
-  --color-warn: var(--warn);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted-soft: var(--muted-soft);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-attention: var(--attention);
+
+  --font-sans: var(--font-inter), -apple-system, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-mono-face), 'JetBrains Mono', ui-monospace, monospace;
+
+  /* pill for interactive, 24px for containers, full for avatars */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 100px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0a09;
-    --foreground: #e7e5e4;
-    --muted: #a8a29e;
-    --border: #292524;
-    --panel: #1c1917;
-    --accent: #6ba6e8;
-    --accent-soft: #172a44;
-    --danger: #f87171;
-    --ok: #4ade80;
-    --warn: #fbbf24;
-  }
+* {
+  border-color: var(--hairline);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--canvas);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
 }
 
+/* ── type ─────────────────────────────────────────────────────────────────── */
+
+/* Display stays at weight 400 with negative tracking. Never bold it. */
+.t-display {
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.13;
+  letter-spacing: -0.4px;
+}
+.t-title {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.33;
+}
+.t-title-sm {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.t-body {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.t-body-sm {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.t-caption {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+/* Badge labels. */
+.t-caption-strong {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+/* Every number renders in the mono face. */
+.t-number {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── buttons: every CTA is a pill ─────────────────────────────────────────── */
+
 .btn {
-  @apply inline-flex items-center gap-1 rounded-md border border-border bg-panel px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-strong);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.15;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.btn:active {
+  background: var(--hairline);
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-sm {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
 }
 .btn-primary {
-  @apply border-accent bg-accent text-white hover:bg-accent/90 hover:text-white;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.btn-primary:active:not(:disabled) {
+  background: var(--primary-active);
+}
+.btn-primary:disabled {
+  background: var(--primary-disabled);
+  color: var(--on-primary);
+  opacity: 1;
+}
+.btn-quiet {
+  background: transparent;
+  border: 1px solid var(--hairline);
+}
+.btn-quiet:active:not(:disabled) {
+  background: var(--surface-strong);
 }
 .btn-danger {
-  @apply border-danger/40 text-danger hover:bg-danger/10;
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--down);
 }
+.btn-danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--down) 10%, transparent);
+}
+.btn-text {
+  height: auto;
+  padding: 0;
+  background: transparent;
+  color: var(--primary);
+}
+
+/* ── forms ────────────────────────────────────────────────────────────────── */
+
+/*
+ * No width here: a utility class in the markup should win without a specificity
+ * fight. `.input-block` is the opt-in for full width.
+ */
 .input {
-  @apply w-full rounded-md border border-border bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-.panel {
-  @apply rounded-lg border border-border bg-panel p-4;
+textarea.input {
+  height: auto;
+  padding: 12px 14px;
+  line-height: 1.6;
+  resize: vertical;
 }
+select.input {
+  padding-right: 8px;
+}
+.input:focus {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+.input::placeholder {
+  color: var(--muted-soft);
+}
+
 .label {
-  @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-muted;
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
-.pill {
-  @apply inline-block rounded-full border border-border px-2 py-0.5 text-xs;
+
+/* ── containers ───────────────────────────────────────────────────────────── */
+
+.card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  padding: 20px;
 }
+.card-flush {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  overflow: hidden;
+}
+.card-hover {
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.card-hover:hover {
+  border-color: var(--muted-soft);
+  box-shadow: var(--shadow-soft);
+}
+.card-selected {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+/* ── badges ───────────────────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-strong);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.badge-quiet {
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--muted);
+}
+.badge-up {
+  background: color-mix(in srgb, var(--up) 12%, transparent);
+  color: var(--up);
+}
+.badge-down {
+  background: color-mix(in srgb, var(--down) 12%, transparent);
+  color: var(--down);
+}
+.badge-attention {
+  background: color-mix(in srgb, var(--attention) 14%, transparent);
+  color: color-mix(in srgb, var(--attention) 80%, var(--ink));
+}
+.badge-primary {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+/*
+ * Track identity. Tracks are a taxonomy, not a status, so these are tints
+ * rather than the single brand blue — which stays reserved for actions.
+ */
+.badge-track {
+  background: color-mix(in srgb, var(--track) 14%, transparent);
+  color: var(--track);
+}
+.track-model-internals {
+  --track: #8b5cf6;
+}
+.track-retrieval {
+  --track: #0d9488;
+}
+.track-agents {
+  --track: #ea580c;
+}
+.track-production {
+  --track: var(--primary);
+}
+.track-evals {
+  --track: #db2777;
+}
+.track-adaptation {
+  --track: #65a30d;
+}
+.track-security {
+  --track: #cf202f;
+}
+:root[data-theme='dark'] .track-model-internals {
+  --track: #a78bfa;
+}
+:root[data-theme='dark'] .track-retrieval {
+  --track: #2dd4bf;
+}
+:root[data-theme='dark'] .track-agents {
+  --track: #fb923c;
+}
+:root[data-theme='dark'] .track-evals {
+  --track: #f472b6;
+}
+:root[data-theme='dark'] .track-adaptation {
+  --track: #a3e635;
+}
+:root[data-theme='dark'] .track-security {
+  --track: #ff6b6b;
+}
+
+/* ── rows: the asset-row pattern, hairline divided ────────────────────────── */
+
+.row-list > * + * {
+  border-top: 1px solid var(--hairline-soft);
+}
+.row {
+  padding: 14px 0;
+}
+
+/* ── notices ──────────────────────────────────────────────────────────────── */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+}
+.notice-error {
+  border-color: color-mix(in srgb, var(--down) 35%, transparent);
+  background: color-mix(in srgb, var(--down) 8%, transparent);
+  color: var(--down);
+}
+.notice-ok {
+  border-color: color-mix(in srgb, var(--up) 35%, transparent);
+  background: color-mix(in srgb, var(--up) 8%, transparent);
+  color: var(--up);
+}
+.notice-attention {
+  border-color: color-mix(in srgb, var(--attention) 35%, transparent);
+  background: color-mix(in srgb, var(--attention) 8%, transparent);
+}
+
+/* ── post text ────────────────────────────────────────────────────────────── */
+
 .post-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  line-height: 1.55;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Scrollbars inside panels, so the review pane doesn't get a chunky OS bar. */
+.scroll-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline) transparent;
+}
+.scroll-slim::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  background: var(--hairline);
+  border-radius: var(--radius-pill);
+}
+.scroll-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Avatars and icon plates are always full circles. */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
 }

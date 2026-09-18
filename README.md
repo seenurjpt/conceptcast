@@ -50,17 +50,32 @@ npm test                        # unit tests: escaping, DAG, constraints, angles
 
 | Screen | What it does |
 |---|---|
-| `/review` | The only screen that matters. Draft with live constraint check, hook-as-LinkedIn-shows-it, clickable sources, research file, critique. Edit in place; approve (publish now or schedule), reject with a reason, regenerate with a chosen angle. Approve enables only after you scroll to the end of the draft. |
-| `/backlog` | Concept table with track, prerequisites (met/unmet), status, relevance (inline edit), timeliness boost, kill notes. Add concepts, retire, generate now, preview the selector, run the full pipeline. Accept/reject proposed concepts. |
-| `/calendar` | Month grid + scheduled/published lists, reschedule, publish now, unschedule. LinkedIn connection status, connect/re-authorise, refresh, disconnect. |
+| `/login` | The front door. Explains what the agent does, shows the pipeline, and signs you in with LinkedIn. Everything else redirects here until you do. |
+| `/review` | The only screen that matters. Draft, research file and critique as three tabs, a live character meter, the hook as LinkedIn truncates it, and every source clickable with its fact count. Edit in place; approve (publish now or schedule), reject with a reason, rewrite with a chosen angle. Approve enables only after you scroll to the end of the draft. |
+| `/backlog` | Runway stats, then the concept list with track, prerequisites (met/unmet), status, inline relevance, timeliness boost and kill notes. Add concepts, retire, generate now, preview the selector ranking, run the full pipeline. Accept or reject proposed concepts. |
+| `/calendar` | Month grid plus scheduled and published lists. Reschedule, publish now, unschedule. |
 | `/voice` | Paste 8–15 posts, extract a style guide (one Sonnet call), edit the guide and audience description. |
-| `/analytics` | Engagement by track; per-post manual metrics entry ("how did this do?") or fetch from LinkedIn. |
+| `/analytics` | Engagement by track with comparative bars; per-post manual metrics entry ("how did this do?") or fetch from LinkedIn. |
 
-## LinkedIn
+### The mark
+
+Three nodes on a rising path, the last one filled: the prerequisite graph the app turns on, where concepts unlock in order and the final one ships. It reads equally as a graph, a rising signal and a broadcast. [src/components/Logo.tsx](src/components/Logo.tsx) is the single source; node weights were tuned by rendering at 16px, where an even-weight version smears into one diagonal.
+
+Icons are generated from that same geometry: `src/app/icon.svg` (brand blue on transparent, for modern browsers), `src/app/favicon.ico` (16/32/48 frames, white on a dark rounded tile so it reads on any browser chrome), `src/app/apple-icon.png`, and `public/icon-{192,512}.png` plus a separately padded `icon-maskable-512.png` for Android, wired up in [src/app/manifest.ts](src/app/manifest.ts).
+
+The design system lives in [DESIGN.md](DESIGN.md) and [src/app/globals.css](src/app/globals.css): one accent colour used sparingly, pill buttons, 24px cards, a mono face on every number, and light and dark palettes that both pass WCAG AA on every surface. The theme follows your system preference and can be toggled in the nav.
+
+## Sign in with LinkedIn
 
 1. Create an app on the LinkedIn Developer Portal, add **Share on LinkedIn** (`w_member_social`) and **Sign In with LinkedIn using OpenID Connect** (`openid profile`). Add `LINKEDIN_REDIRECT_URI` to the app's authorised redirect URLs.
-2. Fill `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI` in `.env.local`, then click **Connect** on `/calendar`.
-3. Tokens are stored in a single Mongo row. Access tokens last 60 days; the daily job refreshes at day 50. When the refresh token (365 days) expires, a banner asks you to re-authorise.
+2. Fill `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI` in `.env.local`, then open the app. Every page redirects to `/login` until you sign in.
+3. Your name and photo appear in the account menu, which also shows whether publishing is active and when the token expires. Tokens live in a single Mongo row; access tokens last 60 days and the daily job refreshes at day 50. When the refresh token (365 days) expires, a banner asks you to sign in again.
+
+### The login gate
+
+`src/middleware.ts` redirects every dashboard page to `/login` and answers every data route with a 401 unless the browser carries a valid session cookie, so a fresh browser never sees a draft. The cookie is an HMAC-signed timestamp (`src/lib/authCookie.ts`), valid for 30 days, signed with `SESSION_SECRET`. The OAuth routes, the Inngest endpoint and the cron endpoint stay public; the latter two carry their own signing key or shared secret.
+
+**What this is and is not.** conceptcast is single-tenant by design (spec §4: one LinkedIn token, one row, no credentials collection). The gate gives the app a front door and keeps drafts off the screen until someone signs in. It is not multi-user access control: the stored tokens belong to the one installation, so anyone who can reach the deployment and complete sign-in ends up in the same workspace. If this ever serves more than one person, replace the cookie with real per-user sessions and scope every query by user.
 
 Posts go to `POST https://api.linkedin.com/rest/posts` with the `LinkedIn-Version` header from `LINKEDIN_API_VERSION`. The post URN is read from the `x-restli-id` response header and stored on the publication. `escapeCommentary()` handles the reserved characters `( ) < > @ | { } [ ] ~ * _ \` (unit-tested — technical posts are full of parentheses).
 
@@ -116,7 +131,9 @@ src/lib/sources/       resolve.ts (fetch + strip + cap)
 src/lib/publishers/    linkedin.ts (OAuth, /rest/posts, escaping, metrics)
 src/lib/               anthropic.ts (client, JSON calls, usage accounting) · voice.ts · feedback.ts · publishing.ts
 src/inngest/           client.ts · functions/
-src/app/               review · backlog · calendar · voice · analytics · api/
+src/middleware.ts      the login gate
+src/lib/authCookie.ts  signed session cookie (HMAC, edge-safe)
+src/app/               login · (dashboard)/{review,backlog,calendar,voice,analytics} · api/
 scripts/               seed · draft · select · publish-due · timeliness · verify-sources · smoke-db
 tests/                 node:test unit tests
 ```
