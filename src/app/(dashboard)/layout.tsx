@@ -7,7 +7,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <>
       <Nav />
       <LinkedInBanner />
-      <main className="mx-auto max-w-[1200px] px-5 py-8">{children}</main>
+      <main className="mx-auto max-w-[1200px] px-4 py-6 sm:px-5 sm:py-8">{children}</main>
     </>
   );
 }

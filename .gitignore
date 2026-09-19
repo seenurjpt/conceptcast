@@ -44,3 +44,9 @@ next-env.d.ts
 /data/
 .env
 .env.local
+
+# local one-off puppeteer audit scripts (not part of the app)
+/closed.mjs
+/diag.mjs
+/drawer.mjs
+/fullaudit.mjs

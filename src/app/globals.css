@@ -134,8 +134,9 @@ body {
 /* ── type ─────────────────────────────────────────────────────────────────── */
 
 /* Display stays at weight 400 with negative tracking. Never bold it. */
+/* Scales with the viewport so a page title does not eat a phone screen. */
 .t-display {
-  font-size: 32px;
+  font-size: clamp(26px, 6vw, 32px);
   font-weight: 400;
   line-height: 1.13;
   letter-spacing: -0.4px;
@@ -205,10 +206,17 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* 36px on touch screens: 32px is under the comfortable tap size, and these
+   are the app's primary row actions. Back to 32px once there's a pointer. */
 .btn-sm {
-  height: 32px;
+  height: 36px;
   padding: 0 14px;
   font-size: 13px;
+}
+@media (min-width: 640px) {
+  .btn-sm {
+    height: 32px;
+  }
 }
 .btn-primary {
   background: var(--primary);
@@ -303,7 +311,14 @@ select.input {
   border: 1px solid var(--hairline);
   border-radius: var(--radius-xl);
   background: var(--surface-card);
-  padding: 20px;
+  /* Tighter on phones: 20px on each side of a 360px screen is 11% of the
+     width spent on padding before any content. */
+  padding: 16px;
+}
+@media (min-width: 640px) {
+  .card {
+    padding: 20px;
+  }
 }
 .card-flush {
   border: 1px solid var(--hairline);
@@ -450,6 +465,20 @@ select.input {
   overflow-wrap: anywhere;
   font-size: 15px;
   line-height: 1.6;
+}
+
+/* Fades the right edge of a horizontal scroller so a cut-off row reads as
+   "there is more" rather than "this is broken". Only when it actually
+   overflows, via the scroll-driven --edge custom property where supported. */
+.scroll-fade {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+}
+@media (min-width: 640px) {
+  .scroll-fade {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
 }
 
 /* Scrollbars inside panels, so the review pane doesn't get a chunky OS bar. */

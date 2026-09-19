@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDialog, type ConfirmOptions } from './Modal';
 
 /* ── page scaffolding ─────────────────────────────────────────────────────── */
@@ -15,12 +15,14 @@ export function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-      <div className="min-w-0">
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-3 sm:mb-6">
+      <div className="min-w-0 flex-1">
         <h1 className="t-display">{title}</h1>
         {subtitle && <p className="t-body-sm mt-1 max-w-3xl text-body">{subtitle}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {/* Actions go full width on a phone rather than squeezing beside the
+          title, where they end up one word per line. */}
+      {actions && <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{actions}</div>}
     </div>
   );
 }
@@ -41,12 +43,18 @@ export function Card({
   return (
     <section className={`${flush ? 'card-flush' : 'card'} ${className}`}>
       {title && (
-        <header className={`flex items-center justify-between gap-2 ${flush ? 'border-b border-hairline px-5 py-3' : 'mb-3'}`}>
-          <span className="label mb-0">{title}</span>
+        // Wraps on narrow screens: a long title and a right-hand action
+        // otherwise collide into each other rather than stacking.
+        <header
+          className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1 ${
+            flush ? 'border-b border-hairline px-4 py-3 sm:px-5' : 'mb-3'
+          }`}
+        >
+          <span className="label mb-0 min-w-0">{title}</span>
           {action}
         </header>
       )}
-      {flush ? <div className="px-5 py-4">{children}</div> : children}
+      {flush ? <div className="px-4 py-4 sm:px-5">{children}</div> : children}
     </section>
   );
 }
@@ -179,20 +187,38 @@ export function Segmented<T extends string>({
   value: T;
   onChange: (v: T) => void;
 }) {
+  // Scrolls sideways rather than wrapping: a wrapped pill breaks into a lumpy
+  // two-row blob on a phone, which reads as broken rather than compact.
+  // The edge fade only appears when it genuinely overflows, so a row that
+  // fits is not pointlessly dimmed.
+  const ref = useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setOverflows(el.scrollWidth > el.clientWidth + 2);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [options.length]);
+
   return (
-    <div className="inline-flex flex-wrap gap-1 rounded-[100px] bg-surface-strong p-1">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={`rounded-[100px] px-3 py-1.5 text-[13px] font-semibold transition-colors ${
-            value === o.value ? 'bg-canvas text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)]' : 'text-muted hover:text-ink'
-          }`}
-        >
-          {o.label}
-          {o.count !== undefined && <span className="ml-1.5 opacity-50">{o.count}</span>}
-        </button>
-      ))}
+    <div ref={ref} className={`scroll-slim -mx-1 max-w-full overflow-x-auto px-1 ${overflows ? 'scroll-fade' : ''}`}>
+      <div className="inline-flex w-max gap-1 rounded-[100px] bg-surface-strong p-1">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            className={`whitespace-nowrap rounded-[100px] px-3 py-2 text-[13px] font-semibold transition-colors sm:py-1.5 ${
+              value === o.value ? 'bg-canvas text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)]' : 'text-muted hover:text-ink'
+            }`}
+          >
+            {o.label}
+            {o.count !== undefined && <span className="ml-1.5 opacity-50">{o.count}</span>}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

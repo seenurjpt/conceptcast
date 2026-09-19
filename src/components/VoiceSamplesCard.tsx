@@ -66,8 +66,15 @@ export function VoiceSamplesCard({ onMessage }: { onMessage: (msg: string, kind:
         placeholder="One sample at a time. Twenty characters minimum."
         aria-label="Voice sample"
       />
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <select className="input" value={source} onChange={(e) => setSource(e.target.value as (typeof SOURCES)[number])} aria-label="Source">
+      {/* The select keeps its own width; the buttons share what's left rather
+          than being squeezed to one word each. */}
+      <div className="mt-2 flex flex-wrap items-center gap-2 max-sm:[&>button]:flex-1">
+        <select
+          className="input w-auto shrink-0"
+          value={source}
+          onChange={(e) => setSource(e.target.value as (typeof SOURCES)[number])}
+          aria-label="Source"
+        >
           {SOURCES.map((s) => (
             <option key={s} value={s}>
               {s}

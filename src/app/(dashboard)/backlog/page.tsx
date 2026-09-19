@@ -181,20 +181,16 @@ export default function BacklogPage() {
         {notice && <Notice kind="ok" onDismiss={() => setNotice(null)}>{notice}</Notice>}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Card>
+      {/* One card holding four figures on a phone: four separate cards stack
+          into a 2x2 block that fills the screen before a single topic shows. */}
+      <Card className="mt-4">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
           <Stat label="Topics left" value={counts.backlog ?? 0} />
-        </Card>
-        <Card>
           <Stat label="Ready to write" value={ready} />
-        </Card>
-        <Card>
           <Stat label="Drafted" value={(counts.selected ?? 0) + (counts.published ?? 0)} />
-        </Card>
-        <Card>
           <Stat label="Published" value={counts.published ?? 0} tone={counts.published ? 'up' : undefined} />
-        </Card>
-      </div>
+        </div>
+      </Card>
 
       {ranking && (
         <Card
@@ -341,27 +337,31 @@ export default function BacklogPage() {
             { value: 'all', label: 'All', count: concepts.length },
           ]}
         />
-        <select
-          className="input h-9 w-auto min-w-[9rem] text-[13px]"
-          value={track}
-          onChange={(e) => setTrack(e.target.value)}
-          aria-label="Filter by track"
-        >
-          <option value="">All tracks</option>
-          {TRACKS.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <input
-          className="input h-9 w-44 text-[13px]"
-          placeholder="Search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          aria-label="Search concepts"
-        />
-        <div className="ml-auto flex gap-2">
+        {/* Track and search share one row on a phone instead of each claiming
+            a full line at their desktop widths. */}
+        <div className="flex w-full gap-2 sm:w-auto">
+          <select
+            className="input h-9 min-w-0 flex-1 text-[13px] sm:w-auto sm:min-w-[9rem] sm:flex-none"
+            value={track}
+            onChange={(e) => setTrack(e.target.value)}
+            aria-label="Filter by track"
+          >
+            <option value="">All tracks</option>
+            {TRACKS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+          <input
+            className="input h-9 min-w-0 flex-1 text-[13px] sm:w-44 sm:flex-none"
+            placeholder="Search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Search concepts"
+          />
+        </div>
+        <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
           <button className="btn btn-quiet btn-sm" onClick={() => setShowAdd((v) => !v)}>
             Add concept
           </button>
@@ -440,8 +440,11 @@ function ConceptRow({
   const eligible = c.status === 'backlog' && unmet.length === 0;
 
   return (
-    <li className={`row flex flex-wrap items-start gap-4${writingSince ? ' writing-row' : ''}`}>
-      <div className="min-w-[240px] flex-1">
+    // Stacks on phones, splits into content + actions from `sm` up. The old
+    // fixed 240px minimum left no room for the action column on a 360px
+    // screen, so the buttons dropped below and floated right on their own.
+    <li className={`row flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:gap-4${writingSince ? ' writing-row' : ''}`}>
+      <div className="min-w-0 flex-1 sm:min-w-[240px]">
         <div className="flex flex-wrap items-center gap-2">
           <span className="t-title-sm">{c.title}</span>
           <TrackBadge track={c.track} />
@@ -473,10 +476,19 @@ function ConceptRow({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      {/* Wraps rather than clipping: below ~340px, or at any width once the
+          reader enlarges their browser font, the buttons no longer fit on one
+          line and must be allowed to drop. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 max-sm:w-full">
+        <label
+          htmlFor={`rel-${c.slug}`}
+          className="t-caption shrink-0 text-muted sm:sr-only"
+        >
+          Relevance
+        </label>
         <input
           id={`rel-${c.slug}`}
-          className="input t-number h-8 w-14 px-2 text-center text-[13px] text-muted"
+          className="input t-number h-9 w-14 shrink-0 px-2 text-center text-[13px] text-muted sm:h-8"
           type="number"
           min={0}
           max={10}
@@ -495,7 +507,7 @@ function ConceptRow({
         />
         {c.status !== 'retired' && c.status !== 'published' && (
           <ActionButton
-            className="btn btn-primary btn-sm"
+            className="btn btn-primary btn-sm max-sm:min-w-[7.5rem] max-sm:flex-1"
             pendingLabel="Writing…"
             title={
               eligible

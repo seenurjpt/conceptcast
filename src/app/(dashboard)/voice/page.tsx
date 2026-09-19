@@ -79,13 +79,14 @@ export default function VoicePage() {
           action={<span className="t-caption text-muted">Separate with ---</span>}
         >
           <textarea
-            className="input w-full min-h-[420px]"
+            className="input w-full min-h-[220px] sm:min-h-[420px]"
             value={pasted}
             onChange={(e) => setPasted(e.target.value)}
             placeholder={'Paste 8 to 15 posts you wrote or admire.\n---\nSecond post…\n---\nThird post…'}
             aria-label="Example posts"
           />
-          <div className="mt-3 flex flex-wrap gap-2">
+          {/* Share the row on a phone rather than stacking into a stair. */}
+          <div className="mt-3 flex flex-wrap gap-2 [&>*]:max-sm:flex-1">
             <ActionButton
               className="btn btn-primary"
               disabled={posts.length < 3}
@@ -134,7 +135,7 @@ export default function VoicePage() {
 
           <Card title="Style guide">
             <textarea
-              className="input w-full min-h-[360px]"
+              className="input w-full min-h-[200px] sm:min-h-[360px]"
               value={styleGuide}
               onChange={(e) => setStyleGuide(e.target.value)}
               placeholder="Extract it from your posts, or write it by hand."

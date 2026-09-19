@@ -21,9 +21,32 @@ const LINKS = [
 
 export function Nav() {
   const path = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close on navigation: without this the drawer stays open over the new page.
+  useEffect(() => setMenuOpen(false), [path]);
+
   return (
+    <>
+      {/* Outside the sticky header on purpose: a fixed child of a sticky
+          ancestor is positioned against that ancestor, not the viewport, so
+          the drawer collapsed to the header's own height. */}
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} path={path} />
+
     <header className="sticky top-0 z-30 border-b border-hairline bg-canvas/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-6 px-5">
+      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-4 sm:px-5 md:gap-6">
+        <button
+          className="-ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink md:hidden"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open menu"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-menu"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+            <path d="M3 5.5h14M3 10h14M3 14.5h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+
         <Link href="/backlog" className="flex shrink-0 items-center gap-2" aria-label="conceptcast home">
           <LogoMark className="h-6 w-6 text-primary" />
           <span className="t-title-sm tracking-[-0.02em]">conceptcast</span>
@@ -53,23 +76,76 @@ export function Nav() {
         </div>
       </div>
 
-      <nav className="flex gap-1 overflow-x-auto border-t border-hairline px-5 py-2 md:hidden">
-        {LINKS.map((l) => {
-          const active = path === l.href || path.startsWith(l.href + '/');
-          return (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`whitespace-nowrap rounded-[100px] px-3 py-1.5 text-[13px] font-medium ${
-                active ? 'bg-surface-strong text-ink' : 'text-muted'
-              }`}
-            >
-              {l.label}
-            </Link>
-          );
-        })}
-      </nav>
     </header>
+    </>
+  );
+}
+
+function MobileMenu({ open, onClose, path }: { open: boolean; onClose: () => void; path: string }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    // The page behind must not scroll while the drawer is over it.
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    panelRef.current?.querySelector<HTMLElement>('a')?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    // z-40 clears the sticky header's z-30 so the drawer covers it.
+    <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
+      <div
+        ref={panelRef}
+        id="mobile-menu"
+        className="absolute inset-y-0 left-0 flex w-[min(17rem,82vw)] flex-col border-r border-hairline bg-surface-card shadow-[0_0_40px_rgba(0,0,0,0.35)]"
+      >
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-hairline px-4">
+          <span className="flex items-center gap-2">
+            <LogoMark className="h-6 w-6 text-primary" />
+            <span className="t-title-sm tracking-[-0.02em]">conceptcast</span>
+          </span>
+          <button
+            className="flex h-10 w-10 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink"
+            onClick={onClose}
+            aria-label="Close menu"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+              <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="scroll-slim flex-1 overflow-y-auto p-2">
+          {LINKS.map((l) => {
+            const active = path === l.href || path.startsWith(l.href + '/');
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                aria-current={active ? 'page' : undefined}
+                className={`flex items-center rounded-[12px] px-3 py-3 text-[15px] font-medium transition-colors ${
+                  active ? 'bg-surface-strong text-ink' : 'text-muted hover:text-ink'
+                }`}
+              >
+                {l.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </div>
   );
 }
 

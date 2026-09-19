@@ -184,12 +184,15 @@ export default function ReviewPage() {
         </div>
       ) : (
         <div className="mt-4 grid items-start gap-4 lg:grid-cols-[300px_1fr]">
-          <ul className="space-y-2">
+          {/* A sideways strip on phones. Stacked vertically, every draft card
+              sits above the one you selected, so you scroll past the whole
+              queue to read it. */}
+          <ul className="scroll-slim -mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:block lg:space-y-2 lg:overflow-visible lg:px-0">
             {rows.map((d) => (
-              <li key={d._id}>
+              <li key={d._id} className="w-[78%] shrink-0 snap-start sm:w-[48%] lg:w-auto">
                 <button
                   onClick={() => setSelectedId(d._id)}
-                  className={`card card-hover w-full p-4 text-left ${selectedId === d._id ? 'card-selected' : ''}`}
+                  className={`card card-hover h-full w-full p-4 text-left ${selectedId === d._id ? 'card-selected' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="t-title-sm min-w-0 flex-1 truncate">{d.concept?.title ?? 'Unknown'}</span>
@@ -330,7 +333,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
               <div className="p-5">
                 {editing ? (
                   <textarea
-                    className="input w-full min-h-[440px]"
+                    className="input w-full min-h-[300px] sm:min-h-[440px]"
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     autoFocus
@@ -499,8 +502,13 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
               <ul className="row-list">
                 {sources.map((s) => (
                   <li key={s.url} className="row min-w-0">
+                    {/* A source without a title falls back to its raw URL,
+                        which has no spaces to break on — break-all, not
+                        break-words, or it runs off the screen edge. */}
                     <a
-                      className="t-body-sm line-clamp-2 font-medium break-words text-primary hover:underline"
+                      className={`t-body-sm line-clamp-2 font-medium text-primary hover:underline ${
+                        s.title ? 'break-words' : 'break-all'
+                      }`}
                       href={s.url}
                       target="_blank"
                       rel="noreferrer"

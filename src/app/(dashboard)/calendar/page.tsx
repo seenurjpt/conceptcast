@@ -127,7 +127,7 @@ export default function CalendarPage() {
       <div className="card-flush mt-4 overflow-hidden">
         <div className="grid grid-cols-7 border-b border-hairline">
           {DAYS.map((d) => (
-            <div key={d} className="label mb-0 px-3 py-2">
+            <div key={d} className="label mb-0 px-1.5 py-2 text-center text-[10px] sm:px-3 sm:text-left sm:text-[12px]">
               {d}
             </div>
           ))}
@@ -136,12 +136,12 @@ export default function CalendarPage() {
           {grid.map((cell, i) => (
             <div
               key={cell.date.toISOString()}
-              className={`min-h-[92px] border-hairline-soft p-2 ${i % 7 !== 6 ? 'border-r' : ''} ${i < 35 ? 'border-b' : ''} ${
+              className={`min-h-[56px] border-hairline-soft p-1.5 sm:min-h-[92px] sm:p-2 ${i % 7 !== 6 ? 'border-r' : ''} ${i < 35 ? 'border-b' : ''} ${
                 cell.inMonth ? '' : 'bg-surface-soft'
               }`}
             >
               <span
-                className={`t-number inline-flex h-6 w-6 items-center justify-center rounded-full text-[12px] ${
+                className={`t-number inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] sm:h-6 sm:w-6 sm:text-[12px] ${
                   cell.isToday ? 'bg-primary text-on-primary' : cell.inMonth ? 'text-muted' : 'text-muted-soft'
                 }`}
               >
