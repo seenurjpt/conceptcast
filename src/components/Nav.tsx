@@ -17,6 +17,7 @@ const LINKS = [
   { href: '/voice', label: 'Voice' },
   { href: '/analytics', label: 'Analytics' },
   { href: '/admin/exemplars', label: 'Exemplars' },
+  { href: '/settings', label: 'Settings' },
 ];
 
 export function Nav() {

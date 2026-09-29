@@ -11,7 +11,9 @@
 import { cookies } from 'next/headers';
 import { SESSION_COOKIE, verifySessionValue } from './authCookie';
 import { HttpError } from './api';
-import { LinkedInAuth } from './db/models';
+import { currentUserId } from './currentUser';
+
+export { currentUserId };
 
 export async function requireUserId(): Promise<string> {
   const jar = await cookies();
@@ -19,9 +21,4 @@ export async function requireUserId(): Promise<string> {
     throw new HttpError(401, 'Sign in with LinkedIn to continue.');
   }
   return currentUserId();
-}
-
-export async function currentUserId(): Promise<string> {
-  const auth = await LinkedInAuth.findOne({ key: 'singleton' }).select({ memberUrn: 1 }).lean<{ memberUrn: string } | null>();
-  return auth?.memberUrn ?? process.env.CONCEPTCAST_USER_ID ?? 'local';
 }

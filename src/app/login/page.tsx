@@ -16,14 +16,14 @@ export const dynamic = 'force-dynamic';
  * cut rather than the type shrunk past readability.
  */
 const STEPS = [
-  ['01', 'Pick a topic', '63 AI engineering concepts, ordered so each builds on the last. Choose one and hit generate.'],
+  ['01', 'Name what you are learning', 'System design, Postgres internals, Kubernetes — anything. It suggests ten subtopics; pick one and hit generate.'],
   ['02', 'It researches the sources', 'Papers, docs and source code. Every fact carries a URL; shaky ones are dropped.'],
   ['03', 'It drafts and critiques itself', 'Three angles, scored against a depth rubric. Weak drafts get killed, not shipped.'],
   ['04', 'You decide what goes out', 'The draft waits with its sources one click away. Publish it, edit it, or bin it.'],
 ];
 
 const STATS = [
-  ['63', 'topics ready'],
+  ['10', 'subtopics suggested'],
   ['3', 'minutes a draft'],
   ['~$0.30', 'per post'],
 ];
@@ -59,8 +59,8 @@ export default function LoginPage() {
           </h1>
 
           <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-white/60">
-            News decays in a day. Pick a concept from the backlog and this researches it against primary sources,
-            then drafts an explainer that is still correct in a year. You approve every post.
+            News decays in a day. Name a topic you are learning, pick a subtopic, and this researches it on the web
+            against primary sources, then drafts an explainer that is still correct in a year. You approve every post.
           </p>
 
           <div className="mt-7">

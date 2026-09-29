@@ -13,7 +13,7 @@ export const objectId = z.custom<ObjectId>((v) => v instanceof ObjectId, 'expect
 
 export const EncryptedBlobSchema = z.object({ iv: z.string(), data: z.string(), tag: z.string(), v: z.literal(1) });
 
-export const ProviderSchema = z.enum(['anthropic', 'openai']);
+export const ProviderSchema = z.enum(['anthropic', 'openai', 'gemini']);
 export type ProviderName = z.infer<typeof ProviderSchema>;
 
 export const UserSchema = z.object({
@@ -23,6 +23,7 @@ export const UserSchema = z.object({
     preferredProvider: ProviderSchema.default('anthropic'),
     anthropicKey: EncryptedBlobSchema.nullable().default(null),
     openaiKey: EncryptedBlobSchema.nullable().default(null),
+    geminiKey: EncryptedBlobSchema.nullable().default(null),
   }),
   createdAt: z.date(),
   updatedAt: z.date(),

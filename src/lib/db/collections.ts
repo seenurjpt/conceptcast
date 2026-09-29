@@ -75,7 +75,7 @@ export const users = {
     const now = new Date();
     const doc = UserSchema.parse({
       _id: userId,
-      llm: { preferredProvider: 'anthropic', anthropicKey: null, openaiKey: null },
+      llm: { preferredProvider: 'anthropic', anthropicKey: null, openaiKey: null, geminiKey: null },
       createdAt: now,
       updatedAt: now,
     });

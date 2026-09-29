@@ -3,11 +3,13 @@ import {
   Draft,
   Concept,
   Publication,
+  Topic,
   DRAFT_STATUSES,
   type DraftDoc,
   type ConceptDoc,
   type PublicationDoc,
   type DraftStatus,
+  type TopicDoc,
 } from '@/lib/db/models';
 
 export const dynamic = 'force-dynamic';
@@ -27,11 +29,21 @@ export const GET = handler(async (req: Request) => {
   ]);
   const conceptById = new Map(concepts.map((c) => [String(c._id), c]));
   const pubByDraft = new Map(publications.map((p) => [String(p.draftId), p]));
+  // The main topic each draft belongs to, for the "Topic › Subtopic" line.
+  const topicIds = [...new Set(concepts.map((c) => c.topicId).filter(Boolean).map(String))];
+  const topics = topicIds.length
+    ? await Topic.find({ _id: { $in: topicIds } }, { title: 1 }).lean<Pick<TopicDoc, '_id' | 'title'>[]>()
+    : [];
+  const topicById = new Map(topics.map((t) => [String(t._id), { _id: String(t._id), title: t.title }]));
   return ok({
-    drafts: drafts.map((d) => ({
-      ...d,
-      concept: conceptById.get(String(d.conceptId)) ?? null,
-      publication: pubByDraft.get(String(d._id)) ?? null,
-    })),
+    drafts: drafts.map((d) => {
+      const concept = conceptById.get(String(d.conceptId)) ?? null;
+      return {
+        ...d,
+        concept,
+        topic: concept?.topicId ? (topicById.get(String(concept.topicId)) ?? null) : null,
+        publication: pubByDraft.get(String(d._id)) ?? null,
+      };
+    }),
   });
 });

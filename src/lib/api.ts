@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { z } from 'zod';
 import { dbConnect } from './db/connect';
 import { installUsageSink } from './db/usageSink';
+import { NoApiKeyError } from './llm/client';
 
 export class HttpError extends Error {
   constructor(
@@ -32,6 +33,8 @@ export function handler<A extends unknown[]>(
       return await fn(...args);
     } catch (e) {
       if (e instanceof HttpError) return fail(e.message, e.status);
+      // 412: the request is fine, the account is missing a precondition (an AI key).
+      if (e instanceof NoApiKeyError) return fail(e.message, 412);
       const err = e as Error;
       console.error(err);
       return fail(err.message || 'Internal error', 500);

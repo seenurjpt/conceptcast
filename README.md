@@ -1,13 +1,14 @@
 # conceptcast
 
-Pick an AI engineering concept from a curated backlog and it researches the topic against primary sources, drafts a deep technical explainer, critiques it against a depth rubric, and hands it to you for review before anything reaches your personal LinkedIn profile. Full design in [SPEC.md](SPEC.md).
+Name something you are learning (System design, Postgres internals, Kubernetes), pick a subtopic, and it researches that subtopic on the web, drafts a deep technical explainer, critiques it against a depth rubric, and hands it to you for review before anything reaches your personal LinkedIn profile. Full design in [SPEC.md](SPEC.md).
 
-You drive it: open Topics, pick a concept, click **Write a post**. About three minutes later the draft opens for review.
+You drive it: open **Topics**, add a topic (it suggests about ten subtopics, or you add your own), open a subtopic, click **Write a post**. A few minutes later the draft opens for review.
 
 ```
-you pick a topic       63 concepts, 7 tracks, prereq DAG
-  → source resolver    fetch hand-seeded primary sources, ~8k tokens each
-  → researcher         Sonnet 5 — mechanism · sourced facts · misconceptions · code
+you add a topic        "System design" → Haiku suggests ~10 subtopics; add your own any time
+you pick a subtopic
+  → source resolver    fetch any hand-seeded primary sources (user subtopics usually have none)
+  → researcher         Sonnet 5 + web search — mechanism · sourced facts · misconceptions · code
   → writer             Sonnet 5 — 3 angles, voice profile + your best posts as examples
   → critic             Sonnet 5 — depth rubric v2, one revision or kill
   → you review         edit, approve, reject, rewrite with another angle
@@ -20,7 +21,7 @@ Nothing runs on a schedule by default. The Inngest crons (`Mon/Thu` generation, 
 
 ```bash
 npm install
-cp .env.example .env.local      # fill MONGODB_URI and ANTHROPIC_API_KEY at minimum
+cp .env.example .env.local      # fill MONGODB_URI at minimum; AI keys are added per user in Settings
 npm run seed                    # validates the prerequisite DAG, upserts 63 concepts, syncs indexes
 npm run dev                     # dashboard at http://localhost:3000
 ```
@@ -53,11 +54,13 @@ npm test                        # unit tests: escaping, DAG, constraints, angles
 | Screen | What it does |
 |---|---|
 | `/login` | The front door. Explains what the app does and signs you in with LinkedIn. Everything else redirects here until you do. |
-| `/backlog` — **Topics** | Where you land. The concept list with track, prerequisites (met/unmet), status, inline relevance and kill notes. **Write a post** runs the pipeline on that topic and opens the draft. Also: add concepts, retire, suggest a topic, accept or reject proposed concepts. |
+| `/backlog` — **Topics** | Where you land. Your main topics as cards (yours first, then the shared ones migrated from the old tracks) with how many subtopics are left to write. **Add topic** creates one and, by default, asks Haiku for about ten starter subtopics. Also: suggest what to write next, accept or reject proposed concepts from the news scan. |
+| `/backlog/[topicId]` | One topic: its subtopics filtered by To write / In flight / Published / Removed, with search. **Write a post** runs the web-research pipeline on that subtopic and opens the draft. **Suggest subtopics** asks for more (deduplicated against what is there), **Add subtopic** takes a title and an optional focus, and user topics can be archived. |
 | `/review` — **Drafts** | The screen that matters. Draft, research file and critique as three tabs, a live character meter, the hook as LinkedIn truncates it, and every source clickable with its fact count. Edit in place; approve (publish now or schedule), reject with a reason, rewrite with a chosen angle. Approve enables only after you scroll to the end of the draft. |
 | `/calendar` — **Published** | What has gone out, plus anything scheduled for later. Reschedule, publish now, unschedule. |
 | `/voice` | Paste 8–15 posts, extract a style guide (one Sonnet call), edit the guide and audience description. |
 | `/analytics` | Engagement by track with comparative bars; per-post manual metrics entry ("how did this do?") or fetch from LinkedIn. |
+| `/settings` | Your AI provider keys: Anthropic, OpenAI, Gemini. Add one or all three, pick which is tried first, replace or remove. A banner on every other page points here until at least one key is stored. |
 
 ### The mark
 
@@ -103,7 +106,12 @@ Without Inngest, the dashboard still works: generation runs inline in the reques
 ## API
 
 ```
-GET/POST   /api/concepts                    list · add to backlog (DAG re-validated)
+GET/POST   /api/topics                      your topics with counts (migrates legacy tracks on first call) · { title, description?, suggest? } → topic + starter subtopics
+GET/PATCH/DELETE /api/topics/[id]           topic + subtopics · rename/describe · archive (retires its unwritten subtopics)
+POST       /api/topics/[id]/subtopics       { title, focus? } — add your own subtopic
+POST       /api/topics/[id]/suggest         one Haiku call → { added, proposed, skipped }
+GET/PUT    /api/user/keys                   which AI keys are stored · add/replace/remove keys, set preferred provider
+GET/POST   /api/concepts                    list (filter ?topicId=) · add to backlog (DAG re-validated)
 GET/PATCH/DELETE /api/concepts/[slug]       detail · relevance/retire/note/sources · retire
 POST       /api/concepts/[slug]/generate    force-run the pipeline now { angle?, force? }
 GET        /api/drafts?status=pending       review queue
@@ -121,6 +129,23 @@ GET        /api/auth/linkedin               start OAuth · /callback · /status 
 GET        /api/cron/publish                fallback scheduler (CRON_SECRET)
 GET/POST/PUT /api/inngest                   Inngest serve endpoint
 ```
+
+## Bring your own AI key
+
+The app never pays for model calls. Each user adds their own key under **Settings**, and every stage (subtopic suggestions, research, writing, critique, voice extraction, proposals) runs on it:
+
+- **Providers**: Anthropic, OpenAI and Google Gemini. Add any subset. Calls try the preferred provider first, then the others in that order; a 401 from one moves on to the next stored key. Model ids per provider and tier live in [src/lib/llm/models.ts](src/lib/llm/models.ts).
+- **Web research works on all three**: Anthropic's web search tool, OpenAI's hosted web search, and Gemini's Google Search grounding. When searching, structured output is prompt-driven and validated with zod (one retry), because no provider combines native JSON mode with search.
+- **Storage**: a key is checked against the provider's model-list endpoint when saved (no tokens spent), then AES-256-GCM encrypted with `KEY_ENCRYPTION_SECRET`. The API only ever returns the last four characters.
+- **No key**: generation endpoints answer `412` with a message pointing to Settings, and the dashboard shows a banner.
+
+`GET /api/user/keys` → `{ preferredProvider, active: [...], providers: { anthropic: { stored, hint }, … } }`.
+
+## Topics and subtopics
+
+A **Topic** is a main subject you are learning (`topics` collection: title, slug, description, `ownerUserId` or `null` for shared, `origin: user | migrated`). A **subtopic** is a `Concept` row with a `topicId`; the old `track` field is kept and is `custom` for anything you add. Subtopics you add or that Haiku suggests carry only a title and a focus line; prerequisites, difficulty, relevance and hand-seeded sources still exist on the model but are hidden for them, and the researcher falls back to web search when a subtopic has no sources. The researcher and writer are told the main topic and your voice-profile audience so a "System design" post reads differently from a "Coding agents" one.
+
+The seven legacy tracks (`coding-agents`, `workflow`, `codegen-quality`, `tooling`, `team-practice`, `economics`, `risk`) become shared topics the first time `GET /api/topics` runs; the migration is idempotent and attaches existing concepts by track. The suggestion prompt lives in [src/lib/prompts/suggest-subtopics.md](src/lib/prompts/suggest-subtopics.md), the service in [src/lib/topics/service.ts](src/lib/topics/service.ts).
 
 ## Topics from the news
 
@@ -160,7 +185,7 @@ Every stage is its own Inngest step, so a retry never re-bills an earlier call. 
 1. `npm run seed:archetypes` upserts the six archetypes and creates the indexes.
 2. Open `/admin/exemplars` and paste at least three real posts per archetype you want to use. The pipeline refuses to write for an archetype with fewer than three and says so in the run error.
 3. On `/voice`, add at least ten voice samples (posts, Slack messages, PR descriptions) and click **Extract profile**. The pipeline needs an active `voice_profiles` row. A new version is also extracted automatically after every 30 approved drafts.
-4. Keys: `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` from the environment work as-is. To bring your own, `PUT /api/user/keys { anthropicKey, openaiKey, preferredProvider }`; keys are AES-256-GCM encrypted with `KEY_ENCRYPTION_SECRET`. If the preferred provider answers 401 the call falls back to the other one.
+4. Keys: there is no environment key. Every call uses a key the signed-in user stored under **Settings** (`PUT /api/user/keys { anthropicKey?, openaiKey?, geminiKey?, preferredProvider? }`), verified against the provider on save and AES-256-GCM encrypted with `KEY_ENCRYPTION_SECRET`. The preferred provider is tried first; a 401 moves on to the next stored key. See [Bring your own AI key](#bring-your-own-ai-key).
 
 **Collections** (native driver, zod-validated, [src/lib/db/collections.ts](src/lib/db/collections.ts)): `users`, `voice_profiles`, `voice_samples`, `archetypes`, `exemplars`, `angles`, `post_drafts` (named so it does not collide with the legacy `drafts` collection), `generation_runs`, `llm_calls`. The user id is the connected LinkedIn member URN (`CONCEPTCAST_USER_ID` or `local` before sign-in); see [src/lib/session.ts](src/lib/session.ts).
 
@@ -182,16 +207,18 @@ Tests: `npm test` runs the Vitest suite in `tests/pipeline/` (char counting, ass
 
 ```
 src/lib/concepts/      seed.ts (the appendix as data) · dag.ts (validation + eligibility) · timeliness.ts · proposals.ts
+src/lib/topics/        service.ts (topics, subtopics, suggestions, track migration) · helpers.ts (slugs, dedupe)
 src/lib/agents/        selector.ts · researcher.ts · writer.ts · critic.ts
-src/lib/prompts/       researcher.md · writer.md · critic.md · rubric.v2.md · reviser.md · selector.md · voice-extract.md · timeliness.md · propose.md
+src/lib/prompts/       researcher.md · writer.md · critic.md · rubric.v2.md · reviser.md · selector.md · suggest-subtopics.md · voice-extract.md · timeliness.md · propose.md
 src/lib/pipeline/      generate.ts (orchestrator) · constraints.ts (machine checks)
 src/lib/sources/       resolve.ts (fetch + strip + cap)
 src/lib/publishers/    linkedin.ts (OAuth, /rest/posts, escaping, metrics)
-src/lib/               anthropic.ts (client, JSON calls, usage accounting) · voice.ts · feedback.ts · publishing.ts
+src/lib/llm/           client.ts (per-user keys, provider fallback, structured output) · models.ts · providers/{anthropic,openai,gemini,verify}.ts
+src/lib/               anthropic.ts (callJson: tier + usage accounting over lib/llm) · voice.ts · feedback.ts · publishing.ts
 src/inngest/           client.ts · functions/
 src/middleware.ts      the login gate
 src/lib/authCookie.ts  signed session cookie (HMAC, edge-safe)
-src/app/               login · (dashboard)/{review,backlog,calendar,voice,analytics} · api/
+src/app/               login · (dashboard)/{backlog,backlog/[topicId],review,calendar,voice,analytics} · api/
 scripts/               seed · draft · select · publish-due · timeliness · verify-sources · smoke-db
 tests/                 node:test unit tests
 ```

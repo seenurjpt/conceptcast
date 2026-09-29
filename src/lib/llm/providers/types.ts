@@ -9,9 +9,15 @@ export interface ProviderCallArgs {
   system: string;
   messages: ChatMessage[];
   maxTokens: number;
-  /** When set, the provider must return `json` matching this JSON Schema. */
+  /**
+   * When set, the provider must return `json` matching this JSON Schema.
+   * Providers that cannot combine native structured output with web search
+   * fall back to prompt-driven JSON, which the client parses and validates.
+   */
   jsonSchema?: Record<string, unknown>;
   schemaName?: string;
+  /** Let the model search the web (Anthropic web_search, OpenAI web_search, Gemini Google Search). */
+  webSearch?: { maxUses: number };
 }
 
 export interface ProviderResult {
@@ -21,6 +27,11 @@ export interface ProviderResult {
   json?: unknown;
   inputTokens: number;
   outputTokens: number;
+  cacheCreationTokens?: number;
+  cacheReadTokens?: number;
+  webSearches?: number;
+  /** The reply was cut off by maxTokens and can never parse as a whole. */
+  truncated?: boolean;
 }
 
 export class ProviderAuthError extends Error {

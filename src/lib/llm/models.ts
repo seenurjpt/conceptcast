@@ -7,7 +7,16 @@
  */
 
 export type Tier = 'cheap' | 'standard';
-export type Provider = 'anthropic' | 'openai';
+export type Provider = 'anthropic' | 'openai' | 'gemini';
+
+/** Fallback order when the preferred provider has no key or rejects it. */
+export const PROVIDERS: readonly Provider[] = ['anthropic', 'openai', 'gemini'];
+
+export const PROVIDER_LABELS: Record<Provider, string> = {
+  anthropic: 'Anthropic',
+  openai: 'OpenAI',
+  gemini: 'Google Gemini',
+};
 
 export interface ModelSpec {
   id: string;
@@ -24,6 +33,10 @@ export const MODELS: Record<Provider, Record<Tier, ModelSpec>> = {
     cheap: { id: 'gpt-4o-mini', inputPerMTok: 0.15, outputPerMTok: 0.6 },
     standard: { id: 'gpt-4o', inputPerMTok: 2.5, outputPerMTok: 10 },
   },
+  gemini: {
+    cheap: { id: 'gemini-2.5-flash', inputPerMTok: 0.3, outputPerMTok: 2.5 },
+    standard: { id: 'gemini-2.5-pro', inputPerMTok: 1.25, outputPerMTok: 10 },
+  },
 };
 
 export const DEFAULT_PROVIDER: Provider = 'anthropic';
@@ -39,4 +52,9 @@ export function modelFor(provider: Provider, tier: Tier): ModelSpec {
 
 export function costUsd(spec: ModelSpec, inputTokens: number, outputTokens: number): number {
   return (inputTokens * spec.inputPerMTok + outputTokens * spec.outputPerMTok) / 1_000_000;
+}
+
+/** Preferred provider first, then the rest in the fixed fallback order. */
+export function providerOrder(preferred: Provider): Provider[] {
+  return [preferred, ...PROVIDERS.filter((p) => p !== preferred)];
 }

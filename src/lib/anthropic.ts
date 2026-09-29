@@ -1,32 +1,29 @@
+/**
+ * The JSON-call entry point the agents use (researcher, writer, critic,
+ * selector, voice extraction, topic suggestions, proposals).
+ *
+ * Historically this spoke to Anthropic directly with a deployment key. It now
+ * delegates to lib/llm/client, which pays for every call with a key the
+ * signed-in user stored in Settings (Anthropic, OpenAI or Gemini, whichever
+ * they added), so nothing here names a provider. The file keeps its name so
+ * the call sites and their git history stay put.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
-import Anthropic from '@anthropic-ai/sdk';
-import type {
-  MessageCreateParamsNonStreaming,
-  MessageParam,
-  Message,
-  TextBlockParam,
-} from '@anthropic-ai/sdk/resources/messages/messages';
 import type { z } from 'zod';
+import { currentUserId } from './currentUser';
+import { complete, extractJson, type ChatMessage, type UsageInfo } from './llm/client';
+import type { Tier } from './llm/models';
 
+export { extractJson };
+
+/** Tiers, not model ids: lib/llm/models.ts decides what each means per provider. */
 export const MODELS = {
   /** Research, writing, critique. */
-  heavy: 'claude-sonnet-5',
+  heavy: 'standard',
   /** Selection and cheap classification. */
-  light: 'claude-haiku-4-5-20251001',
-} as const;
-
-let _client: Anthropic | null = null;
-export function getClient(): Anthropic {
-  if (!_client) {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error('ANTHROPIC_API_KEY is not set. Add it to .env.local.');
-    }
-    // SDK retries 429/5xx with exponential backoff + jitter and honours retry-after.
-    _client = new Anthropic({ maxRetries: 5 });
-  }
-  return _client;
-}
+  light: 'cheap',
+} as const satisfies Record<string, Tier>;
 
 const USAGE_FILE = path.join(process.cwd(), 'data', 'usage.jsonl');
 
@@ -47,124 +44,63 @@ export function setUsageSink(fn: (row: UsageRow) => void): void {
   usageSink = fn;
 }
 
-function logUsage(stage: string, model: string, message: Message): void {
-  const u = message.usage;
+function logUsage(u: UsageInfo): void {
   const row: UsageRow = {
     at: new Date().toISOString(),
-    stage,
-    model,
-    inputTokens: u.input_tokens,
-    outputTokens: u.output_tokens,
-    cacheCreationTokens: u.cache_creation_input_tokens ?? 0,
-    cacheReadTokens: u.cache_read_input_tokens ?? 0,
-    webSearches: u.server_tool_use?.web_search_requests ?? 0,
+    stage: u.stage,
+    model: u.model,
+    inputTokens: u.inputTokens,
+    outputTokens: u.outputTokens,
+    cacheCreationTokens: u.cacheCreationTokens,
+    cacheReadTokens: u.cacheReadTokens,
+    webSearches: u.webSearches,
   };
-  fs.mkdirSync(path.dirname(USAGE_FILE), { recursive: true });
-  fs.appendFileSync(USAGE_FILE, JSON.stringify(row) + '\n');
+  try {
+    fs.mkdirSync(path.dirname(USAGE_FILE), { recursive: true });
+    fs.appendFileSync(USAGE_FILE, JSON.stringify(row) + '\n');
+  } catch (e) {
+    console.error(`  [usage] could not append to ${USAGE_FILE}: ${(e as Error).message}`);
+  }
   usageSink?.(row);
   console.error(
-    `  [usage] ${stage}: in=${row.inputTokens} out=${row.outputTokens}` +
+    `  [usage] ${u.stage} (${u.provider}/${u.model}): in=${row.inputTokens} out=${row.outputTokens}` +
       ` cacheWrite=${row.cacheCreationTokens} cacheRead=${row.cacheReadTokens}` +
       (row.webSearches ? ` webSearches=${row.webSearches}` : ''),
   );
 }
 
-export function extractText(message: Message): string {
-  return message.content
-    .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
-    .map((b) => b.text)
-    .join('\n');
-}
-
-/** Pulls the last fenced JSON block, or falls back to the outermost braces. */
-export function extractJson(text: string): string {
-  const fences = [...text.matchAll(/```(?:json)?\s*\n([\s\S]*?)\n```/g)];
-  if (fences.length > 0) return fences[fences.length - 1][1];
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end <= start) {
-    throw new Error(`No JSON object found in model output (${text.length} chars).`);
-  }
-  return text.slice(start, end + 1);
-}
+/** A system prompt as one or more text blocks; joined with a blank line. */
+export type SystemBlock = { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } };
 
 export interface JsonCallOptions<S extends z.ZodType> {
   stage: string;
-  model: string;
-  system: TextBlockParam[];
-  messages: MessageParam[];
+  /** A tier from MODELS. */
+  model: Tier;
+  system: SystemBlock[];
+  messages: ChatMessage[];
   schema: S;
   maxTokens: number;
-  tools?: MessageCreateParamsNonStreaming['tools'];
+  /** Let the model search the web (every provider has a hosted search tool). */
+  webSearch?: { maxUses: number };
+  /** Defaults to the signed-in author. */
+  userId?: string;
 }
 
 /**
- * Calls the API expecting JSON that validates against `schema`.
- * On a parse/validation failure, retries exactly once with the error
- * appended to the conversation, then fails loudly.
+ * Calls the user's provider expecting JSON that validates against `schema`.
+ * On a parse/validation failure the client retries exactly once with the
+ * error appended to the conversation, then fails loudly.
  */
-export async function callJson<S extends z.ZodType>(
-  opts: JsonCallOptions<S>,
-): Promise<z.infer<S>> {
-  const client = getClient();
-  const params: MessageCreateParamsNonStreaming = {
-    model: opts.model,
-    max_tokens: opts.maxTokens,
-    system: opts.system,
+export async function callJson<S extends z.ZodType>(opts: JsonCallOptions<S>): Promise<z.infer<S>> {
+  return (await complete({
+    userId: opts.userId ?? (await currentUserId()),
+    tier: opts.model,
+    stage: opts.stage,
+    system: opts.system.map((b) => b.text).join('\n\n'),
     messages: opts.messages,
-    ...(opts.tools ? { tools: opts.tools } : {}),
-  };
-
-  let first = await client.messages.create(params);
-  logUsage(opts.stage, opts.model, first);
-
-  // A reply cut off by max_tokens can never parse; asking the model to
-  // "correct" it just truncates again. Re-run once with double the budget.
-  if (first.stop_reason === 'max_tokens') {
-    console.error(`  [${opts.stage}] hit max_tokens (${opts.maxTokens}); retrying with ${opts.maxTokens * 2}`);
-    params.max_tokens = opts.maxTokens * 2;
-    first = await client.messages.create(params);
-    logUsage(`${opts.stage}-untruncate`, opts.model, first);
-    if (first.stop_reason === 'max_tokens') {
-      throw new Error(
-        `[${opts.stage}] output truncated at ${params.max_tokens} tokens twice; raise maxTokens or shorten the prompt's requested output.`,
-      );
-    }
-  }
-  const firstText = extractText(first);
-
-  const attempt = (text: string): { ok: true; value: z.infer<S> } | { ok: false; error: string } => {
-    let raw: unknown;
-    try {
-      raw = JSON.parse(extractJson(text));
-    } catch (e) {
-      return { ok: false, error: `JSON parse error: ${(e as Error).message}` };
-    }
-    const parsed = opts.schema.safeParse(raw);
-    if (parsed.success) return { ok: true, value: parsed.data };
-    return { ok: false, error: JSON.stringify(parsed.error.issues, null, 2) };
-  };
-
-  const r1 = attempt(firstText);
-  if (r1.ok) return r1.value;
-
-  console.error(`  [${opts.stage}] validation failed, retrying once: ${r1.error.slice(0, 300)}`);
-  const retry = await client.messages.create({
-    ...params,
-    messages: [
-      ...opts.messages,
-      { role: 'assistant', content: firstText || '(empty)' },
-      {
-        role: 'user',
-        content:
-          `Your previous output failed validation:\n\n${r1.error}\n\n` +
-          `Respond again with ONLY a single corrected JSON object in a \`\`\`json fence. No prose.`,
-      },
-    ],
-  });
-  logUsage(`${opts.stage}-retry`, opts.model, retry);
-  const r2 = attempt(extractText(retry));
-  if (r2.ok) return r2.value;
-
-  throw new Error(`[${opts.stage}] output failed validation after one retry:\n${r2.error}`);
+    schema: opts.schema,
+    maxTokens: opts.maxTokens,
+    webSearch: opts.webSearch,
+    onUsage: logUsage,
+  })) as z.infer<S>;
 }

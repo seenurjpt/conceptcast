@@ -4,7 +4,7 @@
  * between them: `researchConcept` and `draftFromResearch`.
  */
 import type { Types } from 'mongoose';
-import { Concept, Research, Draft, type ConceptDoc, type ResearchDoc, type DraftDoc } from '../db/models';
+import { Concept, Research, Draft, Topic, type ConceptDoc, type ResearchDoc, type DraftDoc, type TopicDoc } from '../db/models';
 import { installUsageSink, setUsageConcept } from '../db/usageSink';
 import { resolveSources } from '../sources/resolve';
 import { runResearcher, dropMediumConfidence } from '../agents/researcher';
@@ -62,6 +62,13 @@ export function toResearchOutput(doc: ResearchDoc): ResearchOutput {
 
 /* ── half 1: sources + research ───────────────────────────────────────────── */
 
+/** Main-topic context for the prompts; a legacy row without a topic falls back to its track. */
+async function withTopic(concept: ConceptDoc): Promise<ConceptDoc & { topicTitle?: string; topicDescription?: string }> {
+  if (!concept.topicId) return concept;
+  const t = await Topic.findById(concept.topicId).lean<TopicDoc>();
+  return t ? { ...concept, topicTitle: t.title, topicDescription: t.description } : concept;
+}
+
 export async function researchConcept(concept: ConceptDoc, log: Log = noop): Promise<ResearchDoc> {
   installUsageSink();
   setUsageConcept(concept.slug);
@@ -73,7 +80,11 @@ export async function researchConcept(concept: ConceptDoc, log: Log = noop): Pro
     }
 
     log('researching');
-    const research = await runResearcher(concept, resolved.sources);
+    // The researcher sees the main topic and the author's audience, so a
+    // subtopic titled "Consistent hashing" is researched as system design
+    // for that reader, not as an unlabelled phrase.
+    const [meta, voice] = await Promise.all([withTopic(concept), loadVoiceContext()]);
+    const research = await runResearcher(meta, resolved.sources, { audience: voice.audienceDescription });
     const kept = dropMediumConfidence(research);
     log(
       `  ${research.facts.length} facts (${kept.facts.length} high-confidence), ` +
@@ -162,7 +173,7 @@ export async function draftFromResearch(
     const recentHooks = recent.map((r) => r.hook).filter(Boolean);
 
     log(`writing ${angles.length} variant(s): ${angles.join(', ')}`);
-    const written = await runWriter({ concept, research, voice, angles });
+    const written = await runWriter({ concept: await withTopic(concept), research, voice, angles });
     const variants: VariantForCritique[] = written.variants.map((v) => ({
       ...v,
       constraintViolations: checkHardConstraints(v.body),

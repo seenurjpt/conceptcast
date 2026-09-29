@@ -1,8 +1,11 @@
 /**
  * Thin provider abstraction. One function, `complete`, that:
- *   - resolves the user's provider preference and decrypts their key,
+ *   - decrypts the user's stored keys (Anthropic, OpenAI, Gemini) and tries
+ *     them in order: preferred provider first, then the rest. There is no
+ *     deployment-wide key; every call is paid for by the signed-in user,
  *   - maps a tier to a model via lib/llm/models.ts,
- *   - falls back to the other provider when the primary answers 401,
+ *   - moves on to the next stored key when a provider answers 401,
+ *   - re-runs once with double the budget when the reply was truncated,
  *   - requests structured output when a zod schema is passed, validates it,
  *     retries once with the zod error appended, then throws
  *     StructuredOutputError,
@@ -11,10 +14,21 @@
 import { z } from 'zod';
 import { users, llmCalls } from '../db/collections';
 import { decryptSecret } from './keys';
-import { DEFAULT_PROVIDER, MAX_OUTPUT_TOKENS, costUsd, modelFor, type Provider, type Tier } from './models';
+import {
+  DEFAULT_PROVIDER,
+  MAX_OUTPUT_TOKENS,
+  PROVIDER_LABELS,
+  costUsd,
+  modelFor,
+  providerOrder,
+  type Provider,
+  type Tier,
+} from './models';
 import { callAnthropic } from './providers/anthropic';
+import { callGemini } from './providers/gemini';
 import { callOpenAI } from './providers/openai';
 import { ProviderAuthError, type ChatMessage, type ProviderFn, type ProviderResult } from './providers/types';
+import type { UserDoc } from '../schemas/post';
 
 export type { ChatMessage } from './providers/types';
 
@@ -29,11 +43,25 @@ export class StructuredOutputError extends Error {
   }
 }
 
+export const NO_API_KEY_MESSAGE =
+  'No AI API key on your account. Add an Anthropic, OpenAI or Gemini key in Settings to generate anything.';
+
 export class NoApiKeyError extends Error {
-  constructor(userId: string) {
-    super(`No LLM API key configured for user ${userId}. Add one via PUT /api/user/keys.`);
+  constructor(public readonly userId: string) {
+    super(NO_API_KEY_MESSAGE);
     this.name = 'NoApiKeyError';
   }
+}
+
+export interface UsageInfo {
+  stage: string;
+  provider: Provider;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  webSearches: number;
 }
 
 export interface CompleteArgs<S extends z.ZodType | undefined> {
@@ -46,41 +74,49 @@ export interface CompleteArgs<S extends z.ZodType | undefined> {
   runId?: string | null;
   stage?: string;
   maxTokens?: number;
+  /** Let the model search the web. */
+  webSearch?: { maxUses: number };
+  /** Called after every provider round-trip, including retries. */
+  onUsage?: (usage: UsageInfo) => void;
 }
 
 export type CompleteResult<S> = S extends z.ZodType ? z.infer<S> : string;
 
-const PROVIDERS: Record<Provider, ProviderFn> = { anthropic: callAnthropic, openai: callOpenAI };
+const PROVIDERS_FN: Record<Provider, ProviderFn> = { anthropic: callAnthropic, openai: callOpenAI, gemini: callGemini };
 
 interface ResolvedKey {
   provider: Provider;
   apiKey: string;
 }
 
-/** The user's stored key for a provider, else the deployment's env key (single-tenant convenience). */
-async function resolveKeys(userId: string): Promise<{ primary: ResolvedKey | null; fallback: ResolvedKey | null }> {
+export function keyBlobFor(llm: UserDoc['llm'] | undefined, provider: Provider) {
+  if (!llm) return null;
+  return provider === 'anthropic' ? llm.anthropicKey : provider === 'openai' ? llm.openaiKey : llm.geminiKey;
+}
+
+/** Every stored key the user has, preferred provider first. Never the environment. */
+export async function resolveKeys(userId: string): Promise<ResolvedKey[]> {
   const user = await users.get(userId);
   const preferred: Provider = user?.llm.preferredProvider ?? DEFAULT_PROVIDER;
-  const other: Provider = preferred === 'anthropic' ? 'openai' : 'anthropic';
-  const keyFor = (p: Provider): string | null => {
-    const blob = p === 'anthropic' ? user?.llm.anthropicKey : user?.llm.openaiKey;
-    if (blob) return decryptSecret(blob);
-    const env = p === 'anthropic' ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
-    return env ?? null;
-  };
-  const pk = keyFor(preferred);
-  const ok = keyFor(other);
-  return {
-    primary: pk ? { provider: preferred, apiKey: pk } : ok ? { provider: other, apiKey: ok } : null,
-    fallback: pk && ok ? { provider: other, apiKey: ok } : null,
-  };
+  const out: ResolvedKey[] = [];
+  for (const provider of providerOrder(preferred)) {
+    const blob = keyBlobFor(user?.llm, provider);
+    if (blob) out.push({ provider, apiKey: decryptSecret(blob) });
+  }
+  return out;
+}
+
+/** Which providers the user can use right now, preferred first. */
+export async function availableProviders(userId: string): Promise<Provider[]> {
+  return (await resolveKeys(userId)).map((k) => k.provider);
 }
 
 function toJsonSchema(schema: z.ZodType): Record<string, unknown> {
   return z.toJSONSchema(schema, { target: 'draft-7', unrepresentable: 'any' }) as Record<string, unknown>;
 }
 
-function extractJson(text: string): string {
+/** Pulls the last fenced JSON block, or falls back to the outermost braces. */
+export function extractJson(text: string): string {
   const fences = [...text.matchAll(/```(?:json)?\s*\n([\s\S]*?)\n```/g)];
   if (fences.length > 0) return fences[fences.length - 1][1];
   const start = text.indexOf('{');
@@ -111,18 +147,23 @@ export async function complete<S extends z.ZodType | undefined = undefined>(
 ): Promise<CompleteResult<S>> {
   const stage = args.stage ?? 'unknown';
   const keys = await resolveKeys(args.userId);
-  if (!keys.primary) throw new NoApiKeyError(args.userId);
+  if (keys.length === 0) throw new NoApiKeyError(args.userId);
 
   const jsonSchema = args.schema ? toJsonSchema(args.schema) : undefined;
-  const maxTokens = args.maxTokens ?? MAX_OUTPUT_TOKENS[args.tier];
+  const baseMaxTokens = args.maxTokens ?? MAX_OUTPUT_TOKENS[args.tier];
 
-  const tryKey = async (key: ResolvedKey, messages: ChatMessage[], attempt: string): Promise<ProviderResult> => {
+  const tryKey = async (
+    key: ResolvedKey,
+    messages: ChatMessage[],
+    attempt: string,
+    maxTokens: number,
+  ): Promise<ProviderResult> => {
     const spec = modelFor(key.provider, args.tier);
     const t0 = Date.now();
     let res: ProviderResult | null = null;
     let error: string | null = null;
     try {
-      res = await PROVIDERS[key.provider]({
+      res = await PROVIDERS_FN[key.provider]({
         apiKey: key.apiKey,
         model: spec.id,
         system: args.system,
@@ -130,6 +171,17 @@ export async function complete<S extends z.ZodType | undefined = undefined>(
         maxTokens,
         jsonSchema,
         schemaName: stage.replace(/[^a-zA-Z0-9_]/g, '_'),
+        webSearch: args.webSearch,
+      });
+      args.onUsage?.({
+        stage: attempt,
+        provider: key.provider,
+        model: spec.id,
+        inputTokens: res.inputTokens,
+        outputTokens: res.outputTokens,
+        cacheCreationTokens: res.cacheCreationTokens ?? 0,
+        cacheReadTokens: res.cacheReadTokens ?? 0,
+        webSearches: res.webSearches ?? 0,
       });
       return res;
     } catch (e) {
@@ -154,16 +206,36 @@ export async function complete<S extends z.ZodType | undefined = undefined>(
     }
   };
 
+  /** First key that does not reject us; a 401 moves on to the next stored key. */
   const callWithFallback = async (messages: ChatMessage[], attempt: string): Promise<ProviderResult> => {
-    try {
-      return await tryKey(keys.primary as ResolvedKey, messages, attempt);
-    } catch (e) {
-      if (e instanceof ProviderAuthError && keys.fallback) {
-        console.error(`[llm] ${e.provider} rejected the key (401); falling back to ${keys.fallback.provider}`);
-        return tryKey(keys.fallback, messages, attempt);
+    let lastAuth: ProviderAuthError | null = null;
+    for (const key of keys) {
+      try {
+        let res = await tryKey(key, messages, attempt, baseMaxTokens);
+        // A reply cut off by max_tokens can never parse; asking the model to
+        // "correct" it just truncates again. Re-run once with double the budget.
+        if (res.truncated) {
+          console.error(`  [${attempt}] hit max tokens (${baseMaxTokens}); retrying with ${baseMaxTokens * 2}`);
+          res = await tryKey(key, messages, `${attempt}:untruncate`, baseMaxTokens * 2);
+          if (res.truncated) {
+            throw new Error(
+              `[${attempt}] output truncated at ${baseMaxTokens * 2} tokens twice; raise maxTokens or shorten the requested output.`,
+            );
+          }
+        }
+        return res;
+      } catch (e) {
+        if (e instanceof ProviderAuthError) {
+          lastAuth = e;
+          console.error(`[llm] ${PROVIDER_LABELS[key.provider]} rejected the key (401); trying the next stored key`);
+          continue;
+        }
+        throw e;
       }
-      throw e;
     }
+    throw new Error(
+      `Every stored AI key was rejected (${lastAuth?.provider ?? 'unknown'}: ${lastAuth?.message ?? ''}). Check your keys in Settings.`,
+    );
   };
 
   const first = await callWithFallback(args.messages, stage);
@@ -172,13 +244,16 @@ export async function complete<S extends z.ZodType | undefined = undefined>(
   const r1 = parseStructured(args.schema, first);
   if (r1.ok) return r1.value as CompleteResult<S>;
 
+  console.error(`  [${stage}] validation failed, retrying once: ${r1.error.slice(0, 300)}`);
   const retry = await callWithFallback(
     [
       ...args.messages,
       { role: 'assistant', content: first.text || '(empty)' },
       {
         role: 'user',
-        content: `Your previous output failed validation:\n\n${r1.error}\n\nRespond again with only the corrected structured output.`,
+        content:
+          `Your previous output failed validation:\n\n${r1.error}\n\n` +
+          `Respond again with ONLY a single corrected JSON object in a \`\`\`json fence. No prose.`,
       },
     ],
     `${stage}:retry`,

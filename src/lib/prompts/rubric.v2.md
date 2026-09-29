@@ -1,6 +1,6 @@
 # Scoring rubric for conceptcast drafts (v2)
 
-A draft is a plain-text LinkedIn post teaching one AI engineering mechanism to mid-level full-stack developers who use LLM APIs but have not read a paper.
+A draft is a plain-text LinkedIn post teaching one technical mechanism to working software engineers.
 
 ## Auto-fail conditions
 

@@ -46,7 +46,8 @@ export async function runWriter(input: WriterInput): Promise<WriterOutput> {
       {
         role: 'user',
         content:
-          `# Concept\n\ntitle: ${input.concept.title}\ntrack: ${input.concept.track}\n` +
+          `# Concept\n\ntitle: ${input.concept.title}\n` +
+          (input.concept.topicTitle ? `main topic: ${input.concept.topicTitle}\n` : `track: ${input.concept.track}\n`) +
           `difficulty: ${input.concept.difficulty}\n\n` +
           `# Angles to write (exactly these, one variant each)\n\n${input.angles.map((a) => `- ${a}`).join('\n')}\n\n` +
           researchBlock(input.research),

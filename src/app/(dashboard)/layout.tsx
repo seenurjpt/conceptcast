@@ -1,5 +1,6 @@
 import { Nav } from '@/components/Nav';
 import { LinkedInBanner } from '@/components/LinkedInBanner';
+import { ApiKeyBanner } from '@/components/ApiKeyBanner';
 
 /** Chrome for the signed-in app. The login screen deliberately has none. */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -7,6 +8,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <>
       <Nav />
       <LinkedInBanner />
+      <ApiKeyBanner />
       <main className="mx-auto max-w-[1200px] px-4 py-6 sm:px-5 sm:py-8">{children}</main>
     </>
   );

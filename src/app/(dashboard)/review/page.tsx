@@ -44,6 +44,7 @@ interface DraftRow {
   createdAt: string;
   critique: { score: number; issues: string[]; strengths: string[]; depthPassed: boolean; revisionOf: string | null };
   concept: ConceptLite | null;
+  topic?: { _id: string; title: string } | null;
   publication: { _id: string; status: string; scheduledFor: string; postUrn: string | null; error: string | null } | null;
 }
 interface Research {
@@ -203,7 +204,8 @@ export default function ReviewPage() {
                     <span className="badge badge-quiet">{d.angle}</span>
                     {d.editedByHuman && <span className="badge badge-quiet">edited</span>}
                   </div>
-                  <div className="t-caption mt-2 text-muted">
+                  <div className="t-caption mt-2 truncate text-muted">
+                    {d.topic?.title && <>{d.topic.title} · </>}
                     <span className="t-number text-[13px]">{d.charCount}</span> chars · {fmtRelative(d.createdAt)}
                   </div>
                 </button>

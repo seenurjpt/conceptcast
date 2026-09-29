@@ -404,6 +404,9 @@ select.input {
 .track-security {
   --track: #cf202f;
 }
+.track-custom {
+  --track: var(--muted);
+}
 :root[data-theme='dark'] .track-model-internals {
   --track: #a78bfa;
 }

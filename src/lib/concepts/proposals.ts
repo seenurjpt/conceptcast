@@ -21,7 +21,7 @@ export async function proposeConcepts(): Promise<ConceptProposalDoc[]> {
     model: MODELS.heavy,
     system: [{ type: 'text', text: loadPrompt('propose'), cache_control: { type: 'ephemeral' } }],
     maxTokens: 12_000,
-    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 10 }],
+    webSearch: { maxUses: 10 },
     messages: [
       {
         role: 'user',

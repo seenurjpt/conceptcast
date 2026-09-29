@@ -1,4 +1,4 @@
-import type { TextBlockParam } from '@anthropic-ai/sdk/resources/messages/messages';
+import type { SystemBlock } from '../anthropic';
 import { loadPrompt } from '../loadPrompt';
 import type { VoiceContext } from '../voice';
 
@@ -9,6 +9,9 @@ export interface ConceptMeta {
   track: string;
   focus: string;
   difficulty: 1 | 2 | 3;
+  /** The main topic a subtopic belongs to, when it has one. */
+  topicTitle?: string;
+  topicDescription?: string;
 }
 
 /**
@@ -17,8 +20,8 @@ export interface ConceptMeta {
  * breakpoint is byte-identical across calls until the voice profile changes,
  * so the prefix is served from cache (spec §13).
  */
-export function buildSystem(promptNames: string[], voice?: VoiceContext): TextBlockParam[] {
-  const blocks: TextBlockParam[] = promptNames.map((name) => ({
+export function buildSystem(promptNames: string[], voice?: VoiceContext): SystemBlock[] {
+  const blocks: SystemBlock[] = promptNames.map((name) => ({
     type: 'text' as const,
     text: loadPrompt(name),
   }));

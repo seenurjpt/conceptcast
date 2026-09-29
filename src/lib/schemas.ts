@@ -185,3 +185,19 @@ export const NewsProposeOutputSchema = z.object({
     .min(1),
 });
 export type NewsProposeOutput = z.infer<typeof NewsProposeOutputSchema>;
+
+/* ── subtopic suggestions (main topic → starter subtopics) ────────────────── */
+
+export const SuggestSubtopicsSchema = z.object({
+  subtopics: z
+    .array(
+      z.object({
+        title: z.string().min(3).max(120),
+        /** One line steering the researcher: which mechanism to dig into. */
+        focus: z.string().min(10).max(300),
+      }),
+    )
+    .min(3)
+    .max(15),
+});
+export type SuggestSubtopicsOutput = z.infer<typeof SuggestSubtopicsSchema>;

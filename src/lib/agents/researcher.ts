@@ -4,13 +4,14 @@ import { ResearchSchema, type Research } from '../schemas';
 import { buildSystem, type ConceptMeta } from './shared';
 
 /**
- * Researcher — Sonnet 5 + web_search (spec §5.3).
+ * Researcher — the user's standard-tier model + web search (spec §5.3).
  * When fewer than two primary sources resolved, the researcher gets more
  * search budget and is told to fill the gap itself (spec §5.2 step 3).
  */
 export async function runResearcher(
   concept: ConceptMeta,
   sources: FetchedSource[],
+  ctx: { audience?: string } = {},
 ): Promise<Research> {
   const sourceBlocks = sources
     .map(
@@ -30,13 +31,17 @@ export async function runResearcher(
     model: MODELS.heavy,
     system: buildSystem(['researcher']),
     maxTokens: 16_000,
-    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: thin ? 10 : 6 }],
+    webSearch: { maxUses: thin ? 10 : 6 },
     messages: [
       {
         role: 'user',
         content:
-          `# Concept\n\nslug: ${concept.slug}\ntitle: ${concept.title}\ntrack: ${concept.track}\n` +
-          `difficulty: ${concept.difficulty}\nfocus: ${concept.focus}\n\n` +
+          `# Concept\n\ntitle: ${concept.title}\n` +
+          (concept.topicTitle
+            ? `main topic: ${concept.topicTitle}${concept.topicDescription ? ` — ${concept.topicDescription}` : ''}\n`
+            : `track: ${concept.track}\n`) +
+          `difficulty: ${concept.difficulty}\nfocus: ${concept.focus || concept.title}\n\n` +
+          (ctx.audience ? `# Audience\n\n${ctx.audience}\n\n` : '') +
           `# Primary sources\n\n${sourceBlocks || '(none resolved)'}${gapNote}`,
       },
     ],

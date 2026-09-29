@@ -1,5 +1,5 @@
 import mongoose, { Schema, type Model, type Types } from 'mongoose';
-import { TRACKS, type Track, type SourceType } from '../concepts/seed';
+import { type SourceType } from '../concepts/seed';
 
 /* ── concepts ─────────────────────────────────────────────────────────────── */
 
@@ -16,7 +16,10 @@ export interface ConceptDoc {
   _id: Types.ObjectId;
   slug: string;
   title: string;
-  track: Track;
+  /** Legacy grouping. Migrated rows keep their track name; user subtopics are 'custom'. */
+  track: string;
+  /** The main topic this subtopic belongs to. Null only for a legacy row not yet migrated. */
+  topicId: Types.ObjectId | null;
   oneLiner: string;
   focus: string;
   prerequisites: string[];
@@ -30,7 +33,7 @@ export interface ConceptDoc {
   /** Why the last pipeline run killed the draft (spec 5.5), or a human note. */
   note: string | null;
   /** Where the topic came from. News topics are perishable; the UI shows their age. */
-  origin: 'seed' | 'proposal' | 'news';
+  origin: 'seed' | 'proposal' | 'news' | 'user' | 'suggested';
   /** For news topics: when the story broke. */
   storyDate: Date | null;
   createdAt: Date;
@@ -48,19 +51,20 @@ const PrimarySourceSchema = new Schema<PrimarySourceDoc>(
 const ConceptSchema = new Schema<ConceptDoc>({
   slug: { type: String, required: true, unique: true },
   title: { type: String, required: true },
-  track: { type: String, required: true, enum: TRACKS },
-  oneLiner: { type: String, required: true },
-  focus: { type: String, required: true },
+  track: { type: String, required: true, default: 'custom' },
+  topicId: { type: Schema.Types.ObjectId, ref: 'Topic', default: null, index: true },
+  oneLiner: { type: String, default: '' },
+  focus: { type: String, default: '' },
   prerequisites: { type: [String], required: true, default: [] },
-  difficulty: { type: Number, required: true, min: 1, max: 3 },
-  primarySources: { type: [PrimarySourceSchema], required: true },
-  devRelevance: { type: Number, required: true, min: 0, max: 10 },
+  difficulty: { type: Number, required: true, min: 1, max: 3, default: 2 },
+  primarySources: { type: [PrimarySourceSchema], required: true, default: [] },
+  devRelevance: { type: Number, required: true, min: 0, max: 10, default: 5 },
   status: { type: String, required: true, enum: CONCEPT_STATUSES, default: 'backlog' },
   coveredAt: { type: Date, default: null },
   publishedDraftId: { type: Schema.Types.ObjectId, ref: 'Draft', default: null },
   timelinessBoost: { type: Number, required: true, default: 0 },
   note: { type: String, default: null },
-  origin: { type: String, required: true, enum: ['seed', 'proposal', 'news'], default: 'seed' },
+  origin: { type: String, required: true, enum: ['seed', 'proposal', 'news', 'user', 'suggested'], default: 'seed' },
   storyDate: { type: Date, default: null },
   createdAt: { type: Date, required: true, default: () => new Date() },
 });
@@ -343,7 +347,7 @@ export interface ConceptProposalDoc {
   _id: Types.ObjectId;
   slug: string;
   title: string;
-  track: Track;
+  track: string;
   oneLiner: string;
   focus: string;
   prerequisites: string[];
@@ -363,12 +367,12 @@ export interface ConceptProposalDoc {
 const ConceptProposalSchema = new Schema<ConceptProposalDoc>({
   slug: { type: String, required: true, index: true },
   title: { type: String, required: true },
-  track: { type: String, required: true, enum: TRACKS },
-  oneLiner: { type: String, required: true },
-  focus: { type: String, required: true },
+  track: { type: String, required: true, default: 'custom' },
+  oneLiner: { type: String, default: '' },
+  focus: { type: String, default: '' },
   prerequisites: { type: [String], required: true, default: [] },
-  difficulty: { type: Number, required: true, min: 1, max: 3 },
-  devRelevance: { type: Number, required: true, min: 0, max: 10 },
+  difficulty: { type: Number, required: true, min: 1, max: 3, default: 2 },
+  devRelevance: { type: Number, required: true, min: 0, max: 10, default: 5 },
   primarySources: { type: [PrimarySourceSchema], required: true, default: [] },
   rationale: { type: String, required: true },
   status: { type: String, required: true, enum: PROPOSAL_STATUSES, default: 'pending', index: true },
@@ -431,12 +435,40 @@ const UsageSchema = new Schema<UsageDoc>({
   webSearches: { type: Number, required: true, default: 0 },
 });
 
+/* ── topics (a main topic groups subtopics; subtopics are Concept rows) ───── */
+
+export const TOPIC_ORIGINS = ['migrated', 'user'] as const;
+export type TopicOrigin = (typeof TOPIC_ORIGINS)[number];
+
+export interface TopicDoc {
+  _id: Types.ObjectId;
+  /** null = shared (a legacy track migrated into a topic); otherwise the creating user. */
+  ownerUserId: string | null;
+  slug: string;
+  title: string;
+  description: string;
+  origin: TopicOrigin;
+  archived: boolean;
+  createdAt: Date;
+}
+
+const TopicSchema = new Schema<TopicDoc>({
+  ownerUserId: { type: String, default: null, index: true },
+  slug: { type: String, required: true, unique: true },
+  title: { type: String, required: true },
+  description: { type: String, default: '' },
+  origin: { type: String, required: true, enum: TOPIC_ORIGINS, default: 'user' },
+  archived: { type: Boolean, required: true, default: false },
+  createdAt: { type: Date, required: true, default: () => new Date() },
+});
+
 /* ── model registration (idempotent under dev reload) ─────────────────────── */
 
 function getModel<T>(name: string, schema: Schema<T>): Model<T> {
   return (mongoose.models[name] as Model<T> | undefined) ?? mongoose.model<T>(name, schema);
 }
 
+export const Topic = getModel<TopicDoc>('Topic', TopicSchema);
 export const Concept = getModel<ConceptDoc>('Concept', ConceptSchema);
 export const Research = getModel<ResearchDoc>('Research', ResearchSchema);
 export const Draft = getModel<DraftDoc>('Draft', DraftSchema);
@@ -449,6 +481,7 @@ export const Usage = getModel<UsageDoc>('Usage', UsageSchema);
 /** Ensures every declared index exists (used by the seed script). */
 export async function syncAllIndexes(): Promise<void> {
   await Promise.all([
+    Topic.syncIndexes(),
     Concept.syncIndexes(),
     Research.syncIndexes(),
     Draft.syncIndexes(),
