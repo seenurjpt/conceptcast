@@ -3,7 +3,7 @@ import { fetchSource, type FetchedSource } from '../fetchSource';
 export interface ResolvedSources {
   sources: FetchedSource[];
   failed: { url: string; error: string }[];
-  /** Fewer than two resolved — the researcher must search to fill the gap (spec §5.2). */
+  /** Fewer than two resolved: the researcher must search to fill the gap (spec §5.2). */
   thin: boolean;
 }
 

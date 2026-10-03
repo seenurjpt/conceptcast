@@ -33,7 +33,7 @@ export interface DraftRunResult {
   critique: Critique;
 }
 
-/** First two non-empty lines — what LinkedIn shows before the fold. */
+/** First two non-empty lines: what LinkedIn shows before the fold. */
 export function extractHook(body: string): string {
   return body
     .split('\n')

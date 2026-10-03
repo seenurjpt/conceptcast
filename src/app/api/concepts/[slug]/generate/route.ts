@@ -18,7 +18,7 @@ const Body = z.object({
   force: z.boolean().default(false),
 });
 
-/** POST /api/concepts/[slug]/generate — force-run the pipeline now. */
+/** POST /api/concepts/[slug]/generate: force-run the pipeline now. */
 export const POST = handler(async (req: Request, ctx: Ctx) => {
   const { slug } = await ctx.params;
   const body = await readJson(req, Body);

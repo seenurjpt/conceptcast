@@ -14,7 +14,7 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-/** GET /api/drafts?status=pending — the review queue. */
+/** GET /api/drafts?status=pending: the review queue. */
 export const GET = handler(async (req: Request) => {
   const status = new URL(req.url).searchParams.get('status') ?? 'pending';
   if (status !== 'all' && !(DRAFT_STATUSES as readonly string[]).includes(status)) {

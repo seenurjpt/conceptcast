@@ -5,8 +5,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'conceptcast',
     short_name: 'conceptcast',
-    description: 'Research, draft, review and publish technical explainers to LinkedIn.',
-    start_url: '/review',
+    description: 'Researched LinkedIn posts on what you are learning.',
+    start_url: '/backlog',
     display: 'standalone',
     background_color: '#0a0b0d',
     theme_color: '#0a0b0d',

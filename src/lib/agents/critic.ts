@@ -17,7 +17,7 @@ export interface CriticInput {
   variants: VariantForCritique[];
 }
 
-/** Critic — Sonnet 5 + depth rubric v2 (spec §5.5). */
+/** Critic: Sonnet 5 + depth rubric v2 (spec §5.5). */
 export async function runCritic(input: CriticInput): Promise<Critique> {
   const variantBlocks = input.variants
     .map(

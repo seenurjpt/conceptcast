@@ -4,8 +4,10 @@ import { LoginPanel } from './LoginPanel';
 import { PipelineDiagram } from './PipelineDiagram';
 
 export const metadata: Metadata = {
-  title: 'conceptcast — sign in',
-  description: 'Research, draft, review and publish technical explainers to LinkedIn.',
+  title: 'Sign in',
+  description: 'Sign in to conceptcast with the LinkedIn account it will post as.',
+  // The landing page is the canonical public page; this one is a door.
+  robots: { index: false, follow: true },
 };
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +18,7 @@ export const dynamic = 'force-dynamic';
  * cut rather than the type shrunk past readability.
  */
 const STEPS = [
-  ['01', 'Name what you are learning', 'System design, Postgres internals, Kubernetes — anything. It suggests ten subtopics; pick one and hit generate.'],
+  ['01', 'Name what you are learning', 'System design, Postgres internals, Kubernetes, or anything else. It suggests ten subtopics; pick one and hit generate.'],
   ['02', 'It researches the sources', 'Papers, docs and source code. Every fact carries a URL; shaky ones are dropped.'],
   ['03', 'It drafts and critiques itself', 'Three angles, scored against a depth rubric. Weak drafts get killed, not shipped.'],
   ['04', 'You decide what goes out', 'The draft waits with its sources one click away. Publish it, edit it, or bin it.'],
@@ -33,7 +35,7 @@ export default function LoginPage() {
     // h-dvh, not h-screen: dvh accounts for mobile browser chrome, which is the
     // usual reason a "100vh" page still scrolls on a phone.
     <div className="flex min-h-dvh flex-col lg:grid lg:h-dvh lg:grid-cols-[1.05fr_minmax(400px,0.9fr)] lg:overflow-hidden">
-      {/* Left: what this is. Hidden on small screens — on a phone the door matters
+      {/* Left: what this is. Hidden on small screens, on a phone the door matters
           more than the pitch, and keeping both would force a scroll. */}
       <section className="relative hidden min-w-0 flex-col justify-between overflow-hidden bg-hero px-10 py-10 text-white lg:flex xl:px-14">
         <div

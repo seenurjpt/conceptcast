@@ -45,7 +45,7 @@ export const PATCH = handler(async (req: Request, ctx: Ctx) => {
 
 const Post = z.object({ action: z.enum(['publish-now', 'fetch-metrics']) });
 
-/** POST /api/publications/[id] { action } — publish immediately or pull metrics now. */
+/** POST /api/publications/[id] { action }: publish immediately or pull metrics now. */
 export const POST = handler(async (req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   if (!isObjectId(id)) throw new HttpError(400, 'Bad id.');
@@ -57,7 +57,7 @@ export const POST = handler(async (req: Request, ctx: Ctx) => {
   return ok({ outcome: await fetchAndRecordMetrics(id) });
 });
 
-/** DELETE /api/publications/[id] — unschedule (draft returns to approved). */
+/** DELETE /api/publications/[id]: unschedule (draft returns to approved). */
 export const DELETE = handler(async (_req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   if (!isObjectId(id)) throw new HttpError(400, 'Bad id.');

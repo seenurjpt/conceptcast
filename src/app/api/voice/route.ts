@@ -16,7 +16,7 @@ const Put = z.object({
   examplePosts: z.array(z.string().min(1).max(5_000)).max(20).optional(),
 });
 
-/** PUT /api/voice — save style guide, audience, and pasted example posts. */
+/** PUT /api/voice: save style guide, audience, and pasted example posts. */
 export const PUT = handler(async (req: Request) => {
   const body = await readJson(req, Put);
   const profile = await VoiceProfile.findOneAndUpdate(

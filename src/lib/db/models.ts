@@ -277,7 +277,7 @@ export const DEFAULT_AUDIENCE =
 
 export interface VoiceProfileDoc {
   _id: Types.ObjectId;
-  /** Always 'singleton' — there is exactly one voice profile. */
+  /** Always 'singleton': there is exactly one voice profile. */
   key: string;
   styleGuide: string;
   audienceDescription: string;

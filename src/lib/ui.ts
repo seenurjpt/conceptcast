@@ -30,13 +30,13 @@ export async function sendJson<T>(url: string, method: 'POST' | 'PATCH' | 'PUT' 
 }
 
 export function fmtDate(d: string | Date | null | undefined): string {
-  if (!d) return '—';
+  if (!d) return '-';
   const date = typeof d === 'string' ? new Date(d) : d;
   return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 export function fmtDay(d: string | Date | null | undefined): string {
-  if (!d) return '—';
+  if (!d) return '-';
   const date = typeof d === 'string' ? new Date(d) : d;
   return date.toLocaleDateString(undefined, { dateStyle: 'medium' });
 }
@@ -50,9 +50,9 @@ export function toLocalInput(d: Date): string {
 /** The LinkedIn fold: roughly the first 210 characters. */
 export const LINKEDIN_FOLD = 210;
 
-/** "3 days ago" / "in 2 hours" — kinder than a timestamp for recency. */
+/** "3 days ago" / "in 2 hours": kinder than a timestamp for recency. */
 export function fmtRelative(d: string | Date | null | undefined): string {
-  if (!d) return '—';
+  if (!d) return '-';
   const date = typeof d === 'string' ? new Date(d) : d;
   const diff = date.getTime() - Date.now();
   const abs = Math.abs(diff);

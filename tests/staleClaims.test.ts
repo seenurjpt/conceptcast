@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 /**
  * releaseStaleClaims talks to Mongo, which this machine does not have, so these
  * assert the decision rule itself: which claimed concepts count as stranded.
- * The rule is duplicated here deliberately — if it changes in the source, this
+ * The rule is duplicated here deliberately: if it changes in the source, this
  * test should be updated to match, which is the point of pinning it.
  */
 const STALE_CLAIM_MS = 20 * 60 * 1000;

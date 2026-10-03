@@ -10,7 +10,7 @@ type Ctx = { params: Promise<{ id: string }> };
 
 const Body = z.object({ angle: AngleSchema.optional() });
 
-/** POST /api/drafts/[id]/regenerate { angle? } — rewrite from the existing research. */
+/** POST /api/drafts/[id]/regenerate { angle? }, rewrite from the existing research. */
 export const POST = handler(async (req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   if (!isObjectId(id)) throw new HttpError(400, 'Bad id.');

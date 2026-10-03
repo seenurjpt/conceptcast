@@ -35,7 +35,7 @@ export interface WriterInput {
   angles: Angle[];
 }
 
-/** Writer — Sonnet 5 + voice profile (spec §5.4). */
+/** Writer: Sonnet 5 + voice profile (spec §5.4). */
 export async function runWriter(input: WriterInput): Promise<WriterOutput> {
   return callJson({
     stage: 'writer',

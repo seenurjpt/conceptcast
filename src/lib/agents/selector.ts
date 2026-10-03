@@ -34,7 +34,7 @@ export function combinedScore(c: {
   return c.teachability + 2 * c.surprise + c.applicability + 0.5 * c.devRelevance + 0.5 * c.timelinessBoost;
 }
 
-/** Selector — Haiku 4.5 ranks the eligible candidates (spec §5.1). */
+/** Selector: Haiku 4.5 ranks the eligible candidates (spec §5.1). */
 export async function rankCandidates(
   candidates: ConceptDoc[],
   recent: RecentPost[],
@@ -45,8 +45,8 @@ export async function rankCandidates(
           (r) =>
             `- ${r.title} [${r.track}]` +
             (r.metrics
-              ? ` — ${r.metrics.reactions} reactions, ${r.metrics.comments} comments, ${r.metrics.shares} shares`
-              : ' — engagement not yet known'),
+              ? `: ${r.metrics.reactions} reactions, ${r.metrics.comments} comments, ${r.metrics.shares} shares`
+              : ': engagement not yet known'),
         )
         .join('\n')
     : '(nothing published yet)';
@@ -106,7 +106,7 @@ export interface SelectionResult {
 
 /**
  * Full selection: eligibility filter in code, Haiku ranking, pick the top.
- * Does not mutate anything — the caller marks the concept `selected`.
+ * Does not mutate anything: the caller marks the concept `selected`.
  */
 export async function selectNextConcept(): Promise<SelectionResult> {
   const [all, published, tracks, recent] = await Promise.all([

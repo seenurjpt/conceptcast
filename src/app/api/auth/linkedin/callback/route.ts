@@ -38,7 +38,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       email: me.email,
     });
 
-    const returnTo = req.cookies.get('li_oauth_return')?.value ?? '/review';
+    const returnTo = req.cookies.get('li_oauth_return')?.value ?? '/backlog';
     const res = back(req, { linkedin: 'signed-in' }, returnTo);
     res.cookies.set(SESSION_COOKIE, await createSessionValue(), sessionCookieOptions);
     return res;

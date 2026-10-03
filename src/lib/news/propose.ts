@@ -86,8 +86,8 @@ export async function proposeFromNews(log: (m: string) => void = () => {}): Prom
         role: 'user',
         content:
           `# Tracks\n\n${TRACKS.join(', ')}\n\n` +
-          `# Existing backlog (slug — title [track])\n\n` +
-          (existing.map((c) => `${c.slug} — ${c.title} [${c.track}]`).join('\n') || '(empty)') +
+          `# Existing backlog (slug | title [track])\n\n` +
+          (existing.map((c) => `${c.slug} | ${c.title} [${c.track}]`).join('\n') || '(empty)') +
           `\n\n# Story clusters\n\n` +
           clusters
             .map(

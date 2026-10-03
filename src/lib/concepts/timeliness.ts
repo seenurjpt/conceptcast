@@ -1,7 +1,7 @@
 /**
  * Optional timeliness signal (spec §3): scan a few feeds for AI headlines,
  * ask Haiku which backlog concepts they relate to, boost those concepts.
- * Never a topic source — a headline can only point at a concept that exists.
+ * Never a topic source: a headline can only point at a concept that exists.
  */
 import { callJson, MODELS } from '../anthropic';
 import { loadPrompt } from '../loadPrompt';
@@ -90,8 +90,8 @@ export async function scanTimeliness(log: (m: string) => void = () => {}): Promi
       {
         role: 'user',
         content:
-          `# Concepts (slug — title — one-liner)\n\n` +
-          concepts.map((c) => `${c.slug} — ${c.title} — ${c.oneLiner}`).join('\n') +
+          `# Concepts (slug | title | one-liner)\n\n` +
+          concepts.map((c) => `${c.slug} | ${c.title} | ${c.oneLiner}`).join('\n') +
           `\n\n# Headlines\n\n${ai.map((h) => `- ${h}`).join('\n')}`,
       },
     ],

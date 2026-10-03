@@ -1,7 +1,7 @@
 /**
  * Publishes every scheduled publication whose time has come, and refreshes
  * the LinkedIn token if due. The same body the Inngest cron runs every 15
- * minutes — handy for a plain OS cron or a one-off.
+ * minutes: handy for a plain OS cron or a one-off.
  *
  *   npm run publish-due
  */
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   const outcomes = await publishDuePublications(new Date());
   if (outcomes.length === 0) console.log('nothing due');
   for (const o of outcomes) {
-    console.log(`${o.publicationId}: ${o.status}${o.postUrn ? ` ${o.postUrn}` : ''}${o.error ? ` — ${o.error}` : ''}`);
+    console.log(`${o.publicationId}: ${o.status}${o.postUrn ? ` ${o.postUrn}` : ''}${o.error ? `: ${o.error}` : ''}`);
   }
   await dbDisconnect();
 }

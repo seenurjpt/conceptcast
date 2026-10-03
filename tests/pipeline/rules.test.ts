@@ -67,7 +67,7 @@ describe('deterministic critic rules', () => {
 
   it('no_em_dash', () => {
     expect(RULES.no_em_dash(good())).toBeNull();
-    expect(RULES.no_em_dash(good({ body: 'one — two' }))?.rule).toBe('no_em_dash');
+    expect(RULES.no_em_dash(good({ body: 'one \u2014 two' }))?.rule).toBe('no_em_dash');
   });
 
   it('banned_openers', () => {
@@ -121,7 +121,7 @@ describe('deterministic critic rules', () => {
   });
 
   it('runRules collects one failure per broken rule', () => {
-    const bad = good({ hook: 'This is **bold** — https://x.y', cta: 'follow for more' }, ['a']);
+    const bad = good({ hook: 'This is **bold** \u2014 https://x.y', cta: 'follow for more' }, ['a']);
     const rules = runRules(bad).map((f) => f.rule);
     expect(rules).toEqual(
       expect.arrayContaining(['hook_standalone', 'no_markdown', 'no_em_dash', 'cta_not_bait', 'hashtag_format', 'no_links_in_body']),

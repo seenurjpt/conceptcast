@@ -16,7 +16,7 @@ export const GET = handler(async (req: Request) => {
   return ok({ proposals });
 });
 
-/** POST /api/proposals — run the monthly "propose 10 concepts" job now. */
+/** POST /api/proposals: run the monthly "propose 10 concepts" job now. */
 export const POST = handler(async () => {
   const proposals = await proposeConcepts();
   return ok({ proposals }, 201);

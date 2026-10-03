@@ -60,7 +60,7 @@ export async function recentPublished(limit = 10): Promise<RecentPost[]> {
   });
 }
 
-/** Tracks of the most recent posts (published or in flight), newest first — for the eligibility filter. */
+/** Tracks of the most recent posts (published or in flight), newest first, for the eligibility filter. */
 export async function recentTracks(limit = 2): Promise<string[]> {
   const concepts = await Concept.find({ status: { $in: ['published', 'selected'] }, coveredAt: { $ne: null } })
     .sort({ coveredAt: -1 })

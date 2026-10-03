@@ -9,7 +9,9 @@
  *   - requests structured output when a zod schema is passed, validates it,
  *     retries once with the zod error appended, then throws
  *     StructuredOutputError,
- *   - logs every call to `llm_calls`.
+ *   - logs every call to `llm_calls`,
+ *   - strips em dashes from every reply, so no AI-written text in the app
+ *     carries one (see lib/noEmDash.ts).
  */
 import { z } from 'zod';
 import { users, llmCalls } from '../db/collections';
@@ -29,6 +31,7 @@ import { callGemini } from './providers/gemini';
 import { callOpenAI } from './providers/openai';
 import { ProviderAuthError, type ChatMessage, type ProviderFn, type ProviderResult } from './providers/types';
 import type { UserDoc } from '../schemas/post';
+import { stripEmDashes, stripEmDashesDeep } from '../noEmDash';
 
 export type { ChatMessage } from './providers/types';
 
@@ -239,10 +242,10 @@ export async function complete<S extends z.ZodType | undefined = undefined>(
   };
 
   const first = await callWithFallback(args.messages, stage);
-  if (!args.schema) return first.text as CompleteResult<S>;
+  if (!args.schema) return stripEmDashes(first.text) as CompleteResult<S>;
 
   const r1 = parseStructured(args.schema, first);
-  if (r1.ok) return r1.value as CompleteResult<S>;
+  if (r1.ok) return stripEmDashesDeep(r1.value) as CompleteResult<S>;
 
   console.error(`  [${stage}] validation failed, retrying once: ${r1.error.slice(0, 300)}`);
   const retry = await callWithFallback(
@@ -259,7 +262,7 @@ export async function complete<S extends z.ZodType | undefined = undefined>(
     `${stage}:retry`,
   );
   const r2 = parseStructured(args.schema, retry);
-  if (r2.ok) return r2.value as CompleteResult<S>;
+  if (r2.ok) return stripEmDashesDeep(r2.value) as CompleteResult<S>;
   throw new StructuredOutputError(stage, r2.error, retry.text);
 }
 

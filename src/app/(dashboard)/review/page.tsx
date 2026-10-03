@@ -140,7 +140,7 @@ export default function ReviewPage() {
     <>
       <PageHeader
         title="Drafts"
-        subtitle="Every claim carries a source. Open them before you approve — your name goes on this."
+        subtitle="Every claim carries a source. Open them before you approve. Your name goes on this."
         actions={
           <Segmented
             value={tab}
@@ -505,7 +505,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                 {sources.map((s) => (
                   <li key={s.url} className="row min-w-0">
                     {/* A source without a title falls back to its raw URL,
-                        which has no spaces to break on — break-all, not
+                        which has no spaces to break on: break-all, not
                         break-words, or it runs off the screen edge. */}
                     <a
                       className={`t-body-sm line-clamp-2 font-medium text-primary hover:underline ${

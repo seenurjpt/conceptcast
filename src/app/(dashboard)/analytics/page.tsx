@@ -34,7 +34,7 @@ interface Pub {
   } | null;
 }
 
-const fmt = (n: number | null, d = 1) => (n === null ? '—' : n.toFixed(d));
+const fmt = (n: number | null, d = 1) => (n === null ? '-' : n.toFixed(d));
 
 export default function AnalyticsPage() {
   const { session } = useSession();
@@ -203,7 +203,7 @@ function PostRow({
       </div>
       <p className="post-text t-caption mt-0.5 line-clamp-2 text-body">{p.hook}</p>
       <p className="t-caption mt-1 text-muted">
-        {fmtRelative(p.publishedAt)} · critic {p.criticScore ?? '—'}/10
+        {fmtRelative(p.publishedAt)} · critic {p.criticScore ?? '-'}/10
         {p.metrics && ` · ${p.metrics.source} metrics`}
       </p>
 

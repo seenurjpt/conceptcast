@@ -1,19 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getJson } from '@/lib/ui';
+import { getJson, sendJson } from '@/lib/ui';
 
 interface Status {
   configured: boolean;
   member: { name: string | null } | null;
 }
 
-const SAFE_NEXT = /^\/(review|backlog|calendar|voice|analytics)(\/|\?|$)/;
+const SAFE_NEXT = /^\/(review|backlog|calendar|voice|analytics|settings|admin)(\/|\?|$)/;
 
 export function LoginPanel() {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [next, setNext] = useState('/review');
+  const [next, setNext] = useState('/backlog');
   const [going, setGoing] = useState(false);
 
   useEffect(() => {
@@ -22,6 +22,11 @@ export function LoginPanel() {
     if (requested && SAFE_NEXT.test(requested)) setNext(requested);
     if (params.get('linkedin') === 'error') {
       setError(params.get('message') ?? 'Sign-in failed. Try again.');
+    }
+    // Sent here with a cookie whose LinkedIn account is gone: drop the cookie
+    // so the front door is actually shut, not just redirecting.
+    if (params.get('stale') === '1') {
+      void sendJson('/api/auth/linkedin/status', 'DELETE').catch(() => undefined);
     }
     // The status endpoint is public so this screen can explain a missing config.
     getJson<Status>('/api/auth/linkedin/status')

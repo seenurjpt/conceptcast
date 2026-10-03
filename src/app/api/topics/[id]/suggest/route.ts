@@ -7,7 +7,7 @@ export const maxDuration = 90;
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** POST /api/topics/[id]/suggest → { added, proposed } — one cheap model call. */
+/** POST /api/topics/[id]/suggest → { added, proposed }, one cheap model call. */
 export const POST = handler(async (_req: Request, ctx: Ctx) => {
   const userId = await requireUserId();
   const { id } = await ctx.params;

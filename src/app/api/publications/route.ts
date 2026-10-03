@@ -4,7 +4,7 @@ import { engagementScore, trackStats } from '@/lib/feedback';
 
 export const dynamic = 'force-dynamic';
 
-/** GET /api/publications?from=ISO&to=ISO — calendar + analytics feed. */
+/** GET /api/publications?from=ISO&to=ISO: calendar + analytics feed. */
 export const GET = handler(async (req: Request) => {
   const url = new URL(req.url);
   const from = url.searchParams.get('from');

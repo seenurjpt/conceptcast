@@ -42,6 +42,7 @@ export function checkHardConstraints(body: string): string[] {
   if (/^\s*[-*] /m.test(body)) violations.push('markdown: contains bullet-list syntax');
   if (MATH_ALPHANUMERIC.test(body)) violations.push('unicode: bold/italic substitution characters');
   if (EMOJI.test(body)) violations.push('emoji: contains emoji');
+  if (/\u2014/.test(body)) violations.push('punctuation: contains an em dash');
 
   const hashtags = body.match(/(^|\s)#[A-Za-z][A-Za-z0-9_]*/g) ?? [];
   if (hashtags.length > 3) violations.push(`hashtags: ${hashtags.length} found (max 3)`);

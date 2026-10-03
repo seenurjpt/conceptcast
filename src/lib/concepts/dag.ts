@@ -65,7 +65,7 @@ export interface EligibilityConcept extends DagNode {
 }
 
 /**
- * True when the last `run` covered tracks are all `track` — i.e. picking this
+ * True when the last `run` covered tracks are all `track`, i.e. picking this
  * track again would make `run + 1` posts from the same track in a row.
  * `recentTracks` is most-recent first.
  */

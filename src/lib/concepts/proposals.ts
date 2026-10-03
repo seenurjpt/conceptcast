@@ -26,8 +26,8 @@ export async function proposeConcepts(): Promise<ConceptProposalDoc[]> {
       {
         role: 'user',
         content:
-          `# Existing backlog (slug — title [track])\n\n` +
-          existing.map((c) => `${c.slug} — ${c.title} [${c.track}]`).join('\n') +
+          `# Existing backlog (slug | title [track])\n\n` +
+          existing.map((c) => `${c.slug} | ${c.title} [${c.track}]`).join('\n') +
           (pending.length ? `\n\n# Already proposed, awaiting review\n\n${pending.map((p) => p.slug).join('\n')}` : ''),
       },
     ],

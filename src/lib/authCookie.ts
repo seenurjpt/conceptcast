@@ -1,7 +1,7 @@
 /**
  * A signed cookie marking "someone completed LinkedIn sign-in in this browser".
  *
- * Scope, deliberately: conceptcast is single-tenant (spec §4 — one LinkedIn
+ * Scope, deliberately: conceptcast is single-tenant (spec §4, one LinkedIn
  * token in one row, no credentials collection). This cookie gates the *UI* so
  * the app has a front door and does not show drafts to a fresh browser. It is
  * NOT an access-control boundary: the LinkedIn tokens belong to the one

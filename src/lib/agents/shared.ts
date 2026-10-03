@@ -2,7 +2,7 @@ import type { SystemBlock } from '../anthropic';
 import { loadPrompt } from '../loadPrompt';
 import type { VoiceContext } from '../voice';
 
-/** The concept fields the agents need — satisfied by both SeedConcept and ConceptDoc. */
+/** The concept fields the agents need: satisfied by both SeedConcept and ConceptDoc. */
 export interface ConceptMeta {
   slug: string;
   title: string;
@@ -36,10 +36,10 @@ export function buildSystem(promptNames: string[], voice?: VoiceContext): System
 export function renderVoiceBlock(voice: VoiceContext): string {
   const examples = voice.examplePosts.length
     ? voice.examplePosts.map((p, i) => `<example_post n="${i + 1}">\n${p}\n</example_post>`).join('\n\n')
-    : '(no example posts yet — fall back to the defaults in the writing instructions)';
+    : '(no example posts yet; fall back to the defaults in the writing instructions)';
   return (
     `# Voice profile\n\n## Audience\n\n${voice.audienceDescription}\n\n` +
-    `## Style guide\n\n${voice.styleGuide || '(no style guide extracted yet — use the defaults)'}\n\n` +
+    `## Style guide\n\n${voice.styleGuide || '(no style guide extracted yet; use the defaults)'}\n\n` +
     `## Example posts (best performers; copy the shape, never the content)\n\n${examples}`
   );
 }

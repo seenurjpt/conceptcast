@@ -4,7 +4,7 @@ import { ResearchSchema, type Research } from '../schemas';
 import { buildSystem, type ConceptMeta } from './shared';
 
 /**
- * Researcher — the user's standard-tier model + web search (spec §5.3).
+ * Researcher: the user's standard-tier model + web search (spec §5.3).
  * When fewer than two primary sources resolved, the researcher gets more
  * search budget and is told to fill the gap itself (spec §5.2 step 3).
  */
@@ -38,7 +38,7 @@ export async function runResearcher(
         content:
           `# Concept\n\ntitle: ${concept.title}\n` +
           (concept.topicTitle
-            ? `main topic: ${concept.topicTitle}${concept.topicDescription ? ` — ${concept.topicDescription}` : ''}\n`
+            ? `main topic: ${concept.topicTitle}${concept.topicDescription ? `: ${concept.topicDescription}` : ''}\n`
             : `track: ${concept.track}\n`) +
           `difficulty: ${concept.difficulty}\nfocus: ${concept.focus || concept.title}\n\n` +
           (ctx.audience ? `# Audience\n\n${ctx.audience}\n\n` : '') +

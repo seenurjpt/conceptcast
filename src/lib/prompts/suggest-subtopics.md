@@ -9,7 +9,7 @@ A good subtopic is a *mechanism* or a *decision*, not a chapter heading. "Load b
 1. Return 8 to 12 subtopics.
 2. Order them from foundational to advanced, so posting in order builds a series.
 3. `title` is at most eight words, specific enough that a competent engineer would expect to learn something they did not already assume.
-4. `focus` is one line for a researcher: which specific mechanism, number, or tradeoff to dig into. It must name something concrete — an algorithm, a limit, a failure mode, a cost.
+4. `focus` is one line for a researcher: which specific mechanism, number, or tradeoff to dig into. It must name something concrete: an algorithm, a limit, a failure mode, a cost.
 5. Skip anything listed under "Already covered", and do not return two subtopics that are the same idea with different words.
 6. Stay inside the topic. If the topic is "System design", do not drift into "how to interview".
 7. No news, no products, no "latest trends". Timeless mechanics only.

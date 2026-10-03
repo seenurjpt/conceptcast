@@ -44,7 +44,7 @@ export const MARKDOWN_RE = /(\*\*|^#{1,6}\s|^\s*[-*]\s|\[.+\]\(.+\))/m;
 export const no_markdown: Rule = ({ assembled }) =>
   MARKDOWN_RE.test(assembled) ? fail('no_markdown', 'post contains markdown (bold, headers, hyphen bullets, or links)') : null;
 
-export const no_em_dash: Rule = ({ assembled }) => (/—/.test(assembled) ? fail('no_em_dash', 'post contains an em dash') : null);
+export const no_em_dash: Rule = ({ assembled }) => (/\u2014/.test(assembled) ? fail('no_em_dash', 'post contains an em dash') : null);
 
 export const banned_openers: Rule = ({ sections }) => {
   const hook = normalize(sections.hook).trim().toLowerCase();
@@ -58,7 +58,7 @@ export const banned_phrases: Rule = ({ assembled }) => {
   return hits.length ? fail('banned_phrases', `post contains banned phrase(s): ${hits.map((h) => `"${h}"`).join(', ')}`) : null;
 };
 
-/** `12%`, `300ms`, `2.5x`, `10k`, `8 GB`, `4096 tokens` — unit must end the token. */
+/** `12%`, `300ms`, `2.5x`, `10k`, `8 GB`, `4096 tokens`, unit must end the token. */
 export const NUMBER_UNIT_RE = /\d+(\.\d+)?\s*(%|ms|s|x|k|GB|tokens)(?![A-Za-z])/g;
 const squash = (s: string) => normalize(s).toLowerCase().replace(/\s+/g, '');
 

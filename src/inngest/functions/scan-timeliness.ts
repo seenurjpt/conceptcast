@@ -1,6 +1,6 @@
 /**
  * Daily: decay yesterday's boosts, then scan feeds for headlines that relate
- * to a backlog concept (spec §3 timeliness signal). Optional — set
+ * to a backlog concept (spec §3 timeliness signal). Optional, set
  * TIMELINESS_ENABLED=false to keep the function registered but inert.
  */
 import { inngest } from '../client';

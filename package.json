@@ -20,7 +20,8 @@
     "timeliness": "tsx scripts/timeliness.ts",
     "smoke-db": "tsx scripts/smoke-db.ts",
     "verify-sources": "tsx scripts/verify-sources.ts",
-    "inngest:dev": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest"
+    "inngest:dev": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest",
+    "strip-em-dashes": "tsx scripts/strip-em-dashes.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",

@@ -15,7 +15,7 @@ export interface FetchedSource {
 
 const ENTITIES: Record<string, string> = {
   amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
-  mdash: '—', ndash: '–', hellip: '…', rsquo: '’',
+  mdash: '-', ndash: '–', hellip: '…', rsquo: '’',
   lsquo: '‘', rdquo: '”', ldquo: '“', times: '×',
 };
 
@@ -68,7 +68,7 @@ async function get(url: string): Promise<{ body: string; contentType: string } |
 
 /**
  * Fetches one source URL. Docs platforms (Mintlify etc.) often serve clean
- * markdown at `<url>.md` — try that first, fall back to stripped HTML.
+ * markdown at `<url>.md`: try that first, fall back to stripped HTML.
  */
 export async function fetchSource(url: string): Promise<FetchedSource> {
   let text: string | null = null;

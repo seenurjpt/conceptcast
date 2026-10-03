@@ -14,7 +14,7 @@ const Body = z.object({
   dryRun: z.boolean().default(false),
 });
 
-/** POST /api/pipeline/run — what the Mon/Thu cron does, on demand. */
+/** POST /api/pipeline/run: what the Mon/Thu cron does, on demand. */
 export const POST = handler(async (req: Request) => {
   const { dryRun } = await readJson(req, Body);
   const selection = await selectNextConcept();

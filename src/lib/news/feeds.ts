@@ -5,6 +5,7 @@
  *
  * Override the list with NEWS_FEEDS=url1,url2 in .env.local.
  */
+import { stripEmDashes } from '../noEmDash';
 
 export interface FeedItem {
   title: string;
@@ -120,7 +121,8 @@ export function extractItems(xml: string, feed = ''): FeedItem[] {
   const out: FeedItem[] = [];
   const blocks = xml.match(/<(item|entry)\b[\s\S]*?<\/\1>/gi) ?? [];
   for (const block of blocks) {
-    const title = decode(tag(block, 'title') ?? '');
+    // Headlines are shown in the dashboard as-is, so they get the same no-em-dash rule as model output.
+    const title = stripEmDashes(decode(tag(block, 'title') ?? ''));
     if (!title) continue;
     const isAtom = /^<entry/i.test(block);
     const rawLink = isAtom ? atomLink(block) : (tag(block, 'link') ?? atomLink(block));

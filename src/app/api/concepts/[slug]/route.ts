@@ -31,7 +31,7 @@ const Patch = z.object({
     .optional(),
 });
 
-/** PATCH /api/concepts/[slug] — relevance, retire/unretire, note, sources, prerequisites. */
+/** PATCH /api/concepts/[slug]: relevance, retire/unretire, note, sources, prerequisites. */
 export const PATCH = handler(async (req: Request, ctx: Ctx) => {
   const { slug } = await ctx.params;
   const body = await readJson(req, Patch);
@@ -53,7 +53,7 @@ export const PATCH = handler(async (req: Request, ctx: Ctx) => {
   return ok({ concept });
 });
 
-/** DELETE /api/concepts/[slug] — retire (soft delete). */
+/** DELETE /api/concepts/[slug]: retire (soft delete). */
 export const DELETE = handler(async (_req: Request, ctx: Ctx) => {
   const { slug } = await ctx.params;
   const concept = await Concept.findOneAndUpdate(

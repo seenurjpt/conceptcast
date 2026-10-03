@@ -37,7 +37,7 @@ const NewConcept = z.object({
     .default([]),
 });
 
-/** POST /api/concepts — add to the backlog (DAG re-validated). */
+/** POST /api/concepts: add to the backlog (DAG re-validated). */
 export const POST = handler(async (req: Request) => {
   const body = await readJson(req, NewConcept);
   if (await Concept.exists({ slug: body.slug })) throw new HttpError(409, `Concept "${body.slug}" already exists.`);

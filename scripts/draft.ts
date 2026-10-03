@@ -32,8 +32,8 @@ function printResult(r: DraftRunResult): void {
   if (r.issues.length) console.log(`critic issues:\n${r.issues.map((i) => `  - ${i}`).join('\n')}`);
   console.log(
     r.status === 'dead'
-      ? 'status: DEAD — draft stored as rejected, concept returned to backlog.'
-      : `status: PENDING — draft ${r.draftId} awaits review at http://localhost:3000/review`,
+      ? 'status: DEAD. Draft stored as rejected, concept returned to backlog.'
+      : `status: PENDING. Draft ${r.draftId} awaits review at http://localhost:3000/review`,
   );
 }
 

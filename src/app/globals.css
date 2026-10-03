@@ -29,7 +29,7 @@
   --hairline-soft: #eef0f3;
 
   /*
-   * text — DESIGN.md's muted (#7c828a) lands at 3.88:1 on white, below WCAG AA
+   * text: DESIGN.md's muted (#7c828a) lands at 3.88:1 on white, below WCAG AA
    * for body text, so it is darkened here. Same for the trading green, which is
    * 2.80:1 on white: it stays the brand green on dark, and darkens on light.
    */
@@ -377,7 +377,7 @@ select.input {
 
 /*
  * Track identity. Tracks are a taxonomy, not a status, so these are tints
- * rather than the single brand blue — which stays reserved for actions.
+ * rather than the single brand blue: which stays reserved for actions.
  */
 .badge-track {
   background: color-mix(in srgb, var(--track) 14%, transparent);
@@ -657,6 +657,120 @@ select.input {
     animation: none;
   }
   .writing-orb::after { display: none; }
+}
+
+/* ── landing page ─────────────────────────────────────────────────────── */
+
+/*
+ * The landing page's own surfaces (hero, dock, closing band, footer). Dark is
+ * the default: these values apply whenever the theme is not explicitly light,
+ * including before any script runs, so the page is dark without JavaScript.
+ * Light is the visitor's choice from the dock toggle.
+ */
+:root {
+  --lp-bg: #000000;
+  --lp-ink: #ffffff;
+  --lp-ink-2: rgba(255, 255, 255, 0.68);
+  --lp-ink-3: rgba(255, 255, 255, 0.6);
+  --lp-ink-soft: rgba(255, 255, 255, 0.55);
+  --lp-line: rgba(255, 255, 255, 0.1);
+  --lp-line-2: rgba(255, 255, 255, 0.18);
+  --lp-chip: rgba(255, 255, 255, 0.05);
+  --lp-chip-hover: rgba(255, 255, 255, 0.1);
+  --lp-glow-1: rgba(0, 82, 255, 0.2);
+  --lp-glow-2: rgba(0, 82, 255, 0.1);
+  --lp-dock: rgba(18, 20, 24, 0.72);
+  --lp-dock-scrolled: rgba(10, 11, 13, 0.9);
+  --lp-dock-line: rgba(255, 255, 255, 0.1);
+  --lp-dock-line-scrolled: rgba(255, 255, 255, 0.15);
+  --lp-dock-shadow: 0 8px 30px -16px rgba(0, 82, 255, 0.45);
+  --lp-dock-shadow-scrolled: 0 12px 40px -12px rgba(0, 0, 0, 0.6);
+}
+:root[data-theme='light'] {
+  --lp-bg: #ffffff;
+  --lp-ink: #0a0b0d;
+  --lp-ink-2: #4b515b;
+  --lp-ink-3: #5b616e;
+  --lp-ink-soft: #7a808a;
+  --lp-line: rgba(10, 11, 13, 0.1);
+  --lp-line-2: rgba(10, 11, 13, 0.16);
+  --lp-chip: rgba(10, 11, 13, 0.04);
+  --lp-chip-hover: rgba(10, 11, 13, 0.08);
+  --lp-glow-1: rgba(0, 82, 255, 0.12);
+  --lp-glow-2: rgba(0, 82, 255, 0.06);
+  --lp-dock: rgba(255, 255, 255, 0.78);
+  --lp-dock-scrolled: rgba(255, 255, 255, 0.92);
+  --lp-dock-line: rgba(10, 11, 13, 0.08);
+  --lp-dock-line-scrolled: rgba(10, 11, 13, 0.12);
+  --lp-dock-shadow: 0 8px 30px -18px rgba(0, 82, 255, 0.35);
+  --lp-dock-shadow-scrolled: 0 12px 36px -16px rgba(10, 11, 13, 0.25);
+}
+
+/* Hero and closing band: the page colour plus two soft glows, drawn as plain
+   gradients (no blur filter, which is expensive to paint on low-end GPUs). */
+.lp-hero {
+  background-color: var(--lp-bg);
+  background-image:
+    radial-gradient(520px circle at 100% 0%, var(--lp-glow-1), rgba(0, 82, 255, 0) 70%),
+    radial-gradient(420px circle at 0% 100%, var(--lp-glow-2), rgba(0, 82, 255, 0) 70%);
+  color: var(--lp-ink);
+}
+.lp-band {
+  background-color: var(--lp-bg);
+  color: var(--lp-ink);
+}
+/* Theme switch icon: dark shows the sun (go light), light shows the moon. */
+:root:not([data-theme='light']) .lp-icon-moon,
+:root[data-theme='light'] .lp-icon-sun {
+  display: none;
+}
+
+/* The pipeline card is a product screenshot: dark in both themes. */
+.lp-island {
+  background-color: #0d0f12;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* Below-the-fold sections: the browser skips their layout and paint until
+   they come near the viewport, which is most of the first-load work on a
+   low-end phone. Browsers without content-visibility ignore both lines. The
+   intrinsic size keeps the scrollbar from jumping as sections render. */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 720px;
+}
+
+/* FAQ uses native details/summary: works with no JavaScript in every browser. */
+.faq > summary {
+  list-style: none;
+}
+.faq > summary::-webkit-details-marker {
+  display: none;
+}
+.faq > summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+.faq-icon {
+  transition: transform 160ms ease;
+}
+.faq[open] .faq-icon {
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+  .faq-icon {
+    transition: none;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 /* A row with a run in flight gets a faint tint so the eye lands on it in a long list. */

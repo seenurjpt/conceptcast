@@ -41,7 +41,7 @@ const RESERVED_RE = new RegExp(`[${RESERVED.map((c) => `\\${c}`).join('')}]`, 'g
 /**
  * Escapes the characters LinkedIn's `commentary` field treats as markup:
  * ( ) < > @ | { } [ ] ~ * _ and the backslash itself. Hashtags (`#`) are
- * left alone so they still link. Idempotent only on unescaped input — never
+ * left alone so they still link. Idempotent only on unescaped input, never
  * call it twice on the same string.
  */
 export function escapeCommentary(text: string): string {
@@ -111,7 +111,7 @@ export interface LinkedInUserInfo {
   email: string | null;
 }
 
-/** OpenID Connect userinfo — this is the "sign in" half of the flow. */
+/** OpenID Connect userinfo: this is the "sign in" half of the flow. */
 export async function fetchUserInfo(accessToken: string): Promise<LinkedInUserInfo> {
   const res = await fetch(USERINFO_URL, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!res.ok) throw new Error(`LinkedIn userinfo ${res.status}: ${(await res.text()).slice(0, 300)}`);
@@ -265,7 +265,7 @@ export class LinkedInPublishError extends Error {
 
 /**
  * Publishes plain text to the member's own feed. Returns the post URN read
- * from the `x-restli-id` header — the body is empty on success.
+ * from the `x-restli-id` header: the body is empty on success.
  */
 export async function publishPost(text: string, auth?: LinkedInAuthDoc | null): Promise<{ postUrn: string }> {
   const a = auth ?? (await getAuth());

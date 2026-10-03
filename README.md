@@ -8,14 +8,14 @@ You drive it: open **Topics**, add a topic (it suggests about ten subtopics, or 
 you add a topic        "System design" → Haiku suggests ~10 subtopics; add your own any time
 you pick a subtopic
   → source resolver    fetch any hand-seeded primary sources (user subtopics usually have none)
-  → researcher         Sonnet 5 + web search — mechanism · sourced facts · misconceptions · code
-  → writer             Sonnet 5 — 3 angles, voice profile + your best posts as examples
-  → critic             Sonnet 5 — depth rubric v2, one revision or kill
+  → researcher         Sonnet 5 + web search: mechanism · sourced facts · misconceptions · code
+  → writer             Sonnet 5: 3 angles, voice profile + your best posts as examples
+  → critic             Sonnet 5: depth rubric v2, one revision or kill
   → you review         edit, approve, reject, rewrite with another angle
   → LinkedIn           /rest/posts, escaping, x-restli-id
 ```
 
-Nothing runs on a schedule by default. The Inngest crons (`Mon/Thu` generation, 15-minute publishing, 48-hour metrics) stay in the repo but are inert without `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` — see [Scheduling](#scheduling-and-background-jobs-inngest) if you ever want them.
+Nothing runs on a schedule by default. The Inngest crons (`Mon/Thu` generation, 15-minute publishing, 48-hour metrics) stay in the repo but are inert without `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY`, see [Scheduling](#scheduling-and-background-jobs-inngest) if you ever want them.
 
 ## Setup
 
@@ -53,11 +53,12 @@ npm test                        # unit tests: escaping, DAG, constraints, angles
 
 | Screen | What it does |
 |---|---|
-| `/login` | The front door. Explains what the app does and signs you in with LinkedIn. Everything else redirects here until you do. |
-| `/backlog` — **Topics** | Where you land. Your main topics as cards (yours first, then the shared ones migrated from the old tracks) with how many subtopics are left to write. **Add topic** creates one and, by default, asks Haiku for about ten starter subtopics. Also: suggest what to write next, accept or reject proposed concepts from the news scan. |
+| `/` | Public landing page: pitch, demo video (`public/showcase-conceptcast.mp4`), how it works, bring-your-own-key. Signed-in visitors are sent to Topics. |
+| `/login` | Signs you in with LinkedIn (noindex; the landing page is the public page). Every dashboard page and data route redirects here until you do. |
+| `/backlog`: **Topics** | Where you land. Your main topics as cards (yours first, then the shared ones migrated from the old tracks) with how many subtopics are left to write. **Add topic** creates one and, by default, asks Haiku for about ten starter subtopics. Also: suggest what to write next, accept or reject proposed concepts from the news scan. |
 | `/backlog/[topicId]` | One topic: its subtopics filtered by To write / In flight / Published / Removed, with search. **Write a post** runs the web-research pipeline on that subtopic and opens the draft. **Suggest subtopics** asks for more (deduplicated against what is there), **Add subtopic** takes a title and an optional focus, and user topics can be archived. |
-| `/review` — **Drafts** | The screen that matters. Draft, research file and critique as three tabs, a live character meter, the hook as LinkedIn truncates it, and every source clickable with its fact count. Edit in place; approve (publish now or schedule), reject with a reason, rewrite with a chosen angle. Approve enables only after you scroll to the end of the draft. |
-| `/calendar` — **Published** | What has gone out, plus anything scheduled for later. Reschedule, publish now, unschedule. |
+| `/review`: **Drafts** | The screen that matters. Draft, research file and critique as three tabs, a live character meter, the hook as LinkedIn truncates it, and every source clickable with its fact count. Edit in place; approve (publish now or schedule), reject with a reason, rewrite with a chosen angle. Approve enables only after you scroll to the end of the draft. |
+| `/calendar`: **Published** | What has gone out, plus anything scheduled for later. Reschedule, publish now, unschedule. |
 | `/voice` | Paste 8–15 posts, extract a style guide (one Sonnet call), edit the guide and audience description. |
 | `/analytics` | Engagement by track with comparative bars; per-post manual metrics entry ("how did this do?") or fetch from LinkedIn. |
 | `/settings` | Your AI provider keys: Anthropic, OpenAI, Gemini. Add one or all three, pick which is tried first, replace or remove. A banner on every other page points here until at least one key is stored. |
@@ -69,6 +70,14 @@ Three nodes on a rising path, the last one filled: the prerequisite graph the ap
 Icons are generated from that same geometry: `src/app/icon.svg` (brand blue on transparent, for modern browsers), `src/app/favicon.ico` (16/32/48 frames, white on a dark rounded tile so it reads on any browser chrome), `src/app/apple-icon.png`, and `public/icon-{192,512}.png` plus a separately padded `icon-maskable-512.png` for Android, wired up in [src/app/manifest.ts](src/app/manifest.ts).
 
 The design system lives in [DESIGN.md](DESIGN.md) and [src/app/globals.css](src/app/globals.css): one accent colour used sparingly, pill buttons, 24px cards, a mono face on every number, and light and dark palettes that both pass WCAG AA on every surface. The theme follows your system preference and can be toggled in the nav.
+
+## Landing page, SEO and performance
+
+The landing page at `/` is rendered once at build time and served as a static file. Signed-in visitors are redirected to Topics by the middleware at the edge, from the session cookie alone, so the page never touches the database.
+
+- **Search**: canonical URL, Open Graph and Twitter cards, a generated social image (`src/app/opengraph-image.tsx`), `robots.txt`, `sitemap.xml`, and JSON-LD for the site, the app, the video and the FAQ. The FAQ text and its structured data come from one array (`src/app/landing/faq.ts`). Set `NEXT_PUBLIC_SITE_URL` to your production origin; on Vercel it is picked up automatically.
+- **Low-end devices**: the walkthrough video downloads only when it nears the viewport, plays only while visible, and is skipped entirely for reduced-motion, Save-Data and 2G visitors, who see the poster (`public/showcase-poster.jpg`). The hero glows are plain gradients rather than blur filters, and below-the-fold sections use `content-visibility: auto`.
+- **Browsers**: Tailwind v4 targets Chrome and Edge 111+, Safari 16.4+ and Firefox 128+. The landing page is checked in Chromium, Firefox and WebKit.
 
 ## Sign in with LinkedIn
 
@@ -82,7 +91,7 @@ The design system lives in [DESIGN.md](DESIGN.md) and [src/app/globals.css](src/
 
 **What this is and is not.** conceptcast is single-tenant by design (spec §4: one LinkedIn token, one row, no credentials collection). The gate gives the app a front door and keeps drafts off the screen until someone signs in. It is not multi-user access control: the stored tokens belong to the one installation, so anyone who can reach the deployment and complete sign-in ends up in the same workspace. If this ever serves more than one person, replace the cookie with real per-user sessions and scope every query by user.
 
-Posts go to `POST https://api.linkedin.com/rest/posts` with the `LinkedIn-Version` header from `LINKEDIN_API_VERSION`. The post URN is read from the `x-restli-id` response header and stored on the publication. `escapeCommentary()` handles the reserved characters `( ) < > @ | { } [ ] ~ * _ \` (unit-tested — technical posts are full of parentheses).
+Posts go to `POST https://api.linkedin.com/rest/posts` with the `LinkedIn-Version` header from `LINKEDIN_API_VERSION`. The post URN is read from the `x-restli-id` response header and stored on the publication. `escapeCommentary()` handles the reserved characters `( ) < > @ | { } [ ] ~ * _ \` (unit-tested, technical posts are full of parentheses).
 
 Metrics via the API need `r_member_social` (`LINKEDIN_EXTRA_SCOPES=r_member_social`). Without it, enter numbers by hand on `/analytics`; for a handful of posts that is fine.
 
@@ -108,7 +117,7 @@ Without Inngest, the dashboard still works: generation runs inline in the reques
 ```
 GET/POST   /api/topics                      your topics with counts (migrates legacy tracks on first call) · { title, description?, suggest? } → topic + starter subtopics
 GET/PATCH/DELETE /api/topics/[id]           topic + subtopics · rename/describe · archive (retires its unwritten subtopics)
-POST       /api/topics/[id]/subtopics       { title, focus? } — add your own subtopic
+POST       /api/topics/[id]/subtopics       { title, focus? }, add your own subtopic
 POST       /api/topics/[id]/suggest         one Haiku call → { added, proposed, skipped }
 GET/PUT    /api/user/keys                   which AI keys are stored · add/replace/remove keys, set preferred provider
 GET/POST   /api/concepts                    list (filter ?topicId=) · add to backlog (DAG re-validated)
@@ -116,15 +125,15 @@ GET/PATCH/DELETE /api/concepts/[slug]       detail · relevance/retire/note/sour
 POST       /api/concepts/[slug]/generate    force-run the pipeline now { angle?, force? }
 GET        /api/drafts?status=pending       review queue
 GET/PATCH  /api/drafts/[id]                 detail with sources · edit { body } or reject { status:'rejected', reason }
-POST       /api/drafts/[id]/approve         { scheduledFor? } — omit to publish now
-POST       /api/drafts/[id]/regenerate      { angle? } — rewrite from existing research
+POST       /api/drafts/[id]/approve         { scheduledFor? }, omit to publish now
+POST       /api/drafts/[id]/regenerate      { angle? }, rewrite from existing research
 GET/PUT    /api/voice                       voice profile
 POST       /api/voice/extract               { posts[] } → style guide
 GET        /api/publications                calendar + per-track stats
 PATCH/POST/DELETE /api/publications/[id]    reschedule or manual metrics · publish-now / fetch-metrics · unschedule
 GET/POST   /api/proposals                   pending proposals · propose 10 now
 POST       /api/proposals/[id]              { action: 'accept' | 'reject' }
-POST       /api/pipeline/run                { dryRun? } — what the Mon/Thu cron does
+POST       /api/pipeline/run                { dryRun? }, what the Mon/Thu cron does
 GET        /api/auth/linkedin               start OAuth · /callback · /status (GET/POST refresh/DELETE)
 GET        /api/cron/publish                fallback scheduler (CRON_SECRET)
 GET/POST/PUT /api/inngest                   Inngest serve endpoint

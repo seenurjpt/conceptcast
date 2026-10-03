@@ -36,7 +36,7 @@ export const PATCH = handler(async (req: Request, ctx: Ctx) => {
   return ok({ topic });
 });
 
-/** DELETE /api/topics/[id] — archive it and retire its waiting subtopics. */
+/** DELETE /api/topics/[id]: archive it and retire its waiting subtopics. */
 export const DELETE = handler(async (_req: Request, ctx: Ctx) => {
   const userId = await requireUserId();
   const { id } = await ctx.params;

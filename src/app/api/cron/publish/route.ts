@@ -19,7 +19,7 @@ export const GET = handler(async (req: Request) => {
     try {
       await inngest.send({ name: EVENTS.published, data: { publicationId: o.publicationId } });
     } catch {
-      /* no Inngest here — metrics are entered by hand or via the publications endpoint */
+      /* no Inngest here: metrics are entered by hand or via the publications endpoint */
     }
   }
   return ok({ token, outcomes });

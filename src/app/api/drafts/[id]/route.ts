@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** GET /api/drafts/[id] — draft + concept + research (sources) + publication. */
+/** GET /api/drafts/[id]: draft + concept + research (sources) + publication. */
 export const GET = handler(async (_req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   if (!isObjectId(id)) throw new HttpError(400, 'Bad id.');
@@ -29,7 +29,7 @@ const Patch = z.object({
   reason: z.string().max(500).optional(),
 });
 
-/** PATCH /api/drafts/[id] — human edit-in-place, or reject with a reason. */
+/** PATCH /api/drafts/[id]: human edit-in-place, or reject with a reason. */
 export const PATCH = handler(async (req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   if (!isObjectId(id)) throw new HttpError(400, 'Bad id.');

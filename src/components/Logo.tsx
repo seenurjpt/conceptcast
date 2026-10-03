@@ -1,7 +1,7 @@
 /**
  * The mark: three nodes on a rising path, the last one filled.
  *
- * It is the prerequisite graph — the mechanic the whole app turns on. Concepts
+ * It is the prerequisite graph: the mechanic the whole app turns on. Concepts
  * unlock in order and the final one ships, so the filled node is the published
  * post. Reads equally as a graph, a rising signal, and a broadcast.
  *

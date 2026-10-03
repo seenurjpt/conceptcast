@@ -49,7 +49,7 @@ function Chip({ n }: { n: Node }) {
       }`}
     >
       <div className={`text-[12px] font-semibold ${n.human ? 'text-[#8fb5ff]' : 'text-white/85'}`}>{n.label}</div>
-      <div className="mt-0.5 text-[10px] text-white/40">{n.sub}</div>
+      <div className="mt-0.5 text-[10px] text-white/60">{n.sub}</div>
     </div>
   );
 }
@@ -90,7 +90,7 @@ export function PipelineDiagram() {
         <Row nodes={ROW_ONE} trailing />
         <Row nodes={ROW_TWO} />
       </ol>
-      <figcaption className="mt-3 text-[12px] text-white/40">
+      <figcaption className="mt-3 text-[12px] text-white/55">
         About three minutes from picking a topic to a draft you can read.
       </figcaption>
     </figure>

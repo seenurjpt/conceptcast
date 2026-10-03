@@ -5,7 +5,7 @@ import { useSession } from './SessionProvider';
 /**
  * Only appears when publishing would actually fail *and* there is something to
  * publish about. A first-run user who has not signed in yet sees the sign-in
- * button in the nav instead — a banner for that is nagging, not informing.
+ * button in the nav instead: a banner for that is nagging, not informing.
  */
 export function LinkedInBanner() {
   const { session, signInHref } = useSession();

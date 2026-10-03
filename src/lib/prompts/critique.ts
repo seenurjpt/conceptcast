@@ -25,11 +25,11 @@ ${input.assembled}
 </post>
 
 Answer three things:
-1. singleIdea — does this post teach exactly one thing? A post that
+1. singleIdea: does this post teach exactly one thing? A post that
    explains a concept AND a tool AND a tradeoff is three posts.
-2. voiceMatch (1-5) — would a reader who knows this author's writing
+2. voiceMatch (1-5): would a reader who knows this author's writing
    believe they wrote this? 3 means "plausible but generic".
-3. hookEarnsTheClick — after reading only the first line, is there an
+3. hookEarnsTheClick: after reading only the first line, is there an
    open loop that costs something to leave unresolved?
 
 Then list specific problems. No praise.`;

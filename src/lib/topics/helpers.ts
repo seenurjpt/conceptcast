@@ -16,7 +16,7 @@ export function slugify(s: string): string {
   return out || 'topic';
 }
 
-/** `base`, else `base-2`, `base-3`… — the first not in `taken`. */
+/** `base`, else `base-2`, `base-3`…: the first not in `taken`. */
 export function uniqueSlug(base: string, taken: Set<string>): string {
   if (!taken.has(base)) return base;
   for (let i = 2; i < 1000; i++) {
