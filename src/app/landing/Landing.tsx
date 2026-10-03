@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { LogoMark } from '@/components/Logo';
-import { PipelineDiagram } from '../login/PipelineDiagram';
 import { Dock } from './Dock';
 import { FAQ } from './faq';
+import { Hero } from './Hero';
 import { LoopVideo } from './LoopVideo';
 
 /**
@@ -35,12 +35,6 @@ const FEATURES: [string, string][] = [
   ['You approve every post', 'Nothing runs on a schedule and nothing is published without your click. The app drafts; you decide.'],
 ];
 
-const STATS: [string, string][] = [
-  ['10', 'subtopics suggested per topic'],
-  ['~3 min', 'from click to draft'],
-  ['$0', 'with a free Gemini key'],
-];
-
 export function Landing() {
   return (
     <div className="min-h-dvh bg-canvas">
@@ -55,58 +49,7 @@ export function Landing() {
       <main id="main">
 
       {/* ── hero ────────────────────────────────────────────────────────── */}
-      <section aria-labelledby="hero-title" className="lp-hero relative overflow-hidden">
-
-        <div className="relative mx-auto max-w-[1120px] px-4 pb-14 pt-28 sm:px-6 sm:pt-36 lg:pb-20">
-          <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-            <div className="min-w-0">
-              <span className="inline-flex w-fit items-center rounded-[100px] border border-[color:var(--lp-line-2)] px-3 py-1 text-[12px] font-semibold text-[color:var(--lp-ink-2)]">
-                For your personal LinkedIn
-              </span>
-              <h1 id="hero-title" className="mt-5 text-[clamp(36px,5.2vw,64px)] leading-[1.02] tracking-[-1.6px]">
-                Post what you are learning.
-                <br />
-                <span className="text-[color:var(--lp-ink-soft)]">Researched, not recalled.</span>
-              </h1>
-              <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-[color:var(--lp-ink-2)] sm:text-[17px]">
-                Name a topic. conceptcast breaks it into subtopics, researches each one on the web against primary
-                sources, drafts a technical explainer in your voice, critiques it, and waits for your approval before
-                anything reaches your feed.
-              </p>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <Link href="/login" className="btn btn-primary h-11 px-6 text-[15px]">
-                  Continue with LinkedIn
-                </Link>
-                <a
-                  href="#how"
-                  className="btn h-11 border-[color:var(--lp-line-2)] bg-[var(--lp-chip)] px-6 text-[15px] text-[color:var(--lp-ink)] hover:bg-[var(--lp-chip-hover)]"
-                >
-                  How it works
-                </a>
-              </div>
-              <p className="mt-3 text-[12px] text-[color:var(--lp-ink-3)]">
-                Bring your own AI key. Nothing is posted without your click.
-              </p>
-            </div>
-
-            <div className="lp-island min-w-0 rounded-[24px] border p-5 sm:p-6">
-              <p className="text-[12px] font-semibold uppercase tracking-wide text-white/55">The pipeline</p>
-              <div className="mt-4">
-                <PipelineDiagram />
-              </div>
-            </div>
-          </div>
-
-          <dl className="mt-12 grid max-w-2xl grid-cols-3 gap-6 border-t border-[color:var(--lp-line)] pt-6">
-            {STATS.map(([value, label]) => (
-              <div key={label}>
-                <dt className="font-mono text-[22px] font-medium tabular-nums">{value}</dt>
-                <dd className="mt-0.5 text-[12px] leading-snug text-[color:var(--lp-ink-3)]">{label}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
+      <Hero />
 
       {/* ── walkthrough video ─────────────────────────────────────────────────── */}
       <section aria-labelledby="walkthrough-title" className="cv-auto border-b border-hairline bg-surface-soft">

@@ -719,6 +719,264 @@ select.input {
   background-color: var(--lp-bg);
   color: var(--lp-ink);
 }
+/* ── cinematic hero (eclipse) ─────────────────────────────────────────────
+   Built only from the app's palette: the near-black hero surface, white ink,
+   the dark-theme primary blue (#4d8bff) and its deeper sibling (#0052ff), and
+   the dark-theme greys for body copy. No colour here is unique to this page.
+
+   Two lengths drive the composition:
+     --ring  the disc's diameter; wider than a phone so only its arc shows
+     --rim   how far down the screen the lit rim sits
+   Dark in both themes: a glow needs a dark sky. */
+.lp-cine {
+  --ring: clamp(560px, 140vw, 1360px);
+  --rim: clamp(240px, 38vh, 400px);
+  --rim: clamp(240px, 38svh, 400px);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  color: #ffffff;
+  min-height: 640px;
+  min-height: max(640px, 100vh);
+  min-height: max(640px, 100svh);
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 70% 38% at 50% var(--rim), rgba(0, 82, 255, 0.26), rgba(0, 82, 255, 0) 72%),
+    #000000;
+}
+
+/* Bottom edge melts into the section below (dark theme). On a light page the
+   fade would pass through grey, so there it is a clean edge. */
+.lp-cine::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 140px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), var(--surface-soft));
+  z-index: -1;
+  pointer-events: none;
+}
+:root[data-theme='light'] .lp-cine::after {
+  display: none;
+}
+
+/* A sparse star field: one 320px tile of single-pixel gradients, faded out
+   toward the horizon. */
+.lp-stars {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(1px 1px at 22px 36px, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 118px 92px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 204px 18px, rgba(169, 200, 255, 0.85), transparent),
+    radial-gradient(1px 1px at 286px 140px, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 64px 208px, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 170px 262px, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 248px 300px, rgba(169, 200, 255, 0.5), transparent);
+  background-size: 320px 320px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 62%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 62%);
+}
+
+/* The disc: near-black with a faint blue lift at its lower edge, and a 2px
+   rim drawn as a conic gradient that is white where the light breaks (the
+   bottom) and fades through the primary blue to nothing at the sides. The
+   glow is layered box-shadows in the same blues; static, so painted once. */
+.lp-ring {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: calc(var(--rim) - var(--ring));
+  width: var(--ring);
+  height: var(--ring);
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background:
+    radial-gradient(circle at 50% 100%, #0b1b40 0%, #050b1a 26%, #000000 58%) padding-box,
+    conic-gradient(
+        from 0deg,
+        rgba(77, 139, 255, 0) 0deg,
+        rgba(77, 139, 255, 0.4) 100deg,
+        #a9c8ff 152deg,
+        #ffffff 180deg,
+        #a9c8ff 208deg,
+        rgba(77, 139, 255, 0.4) 260deg,
+        rgba(77, 139, 255, 0) 360deg
+      )
+      border-box;
+  box-shadow:
+    0 0 16px 1px rgba(169, 200, 255, 0.5),
+    0 0 64px 10px rgba(77, 139, 255, 0.42),
+    0 0 180px 50px rgba(0, 82, 255, 0.22),
+    inset 0 -24px 50px -12px rgba(120, 165, 255, 0.42),
+    inset 0 -110px 150px -40px rgba(0, 82, 255, 0.28);
+  transform: translateX(-50%);
+  animation: lp-ring-in 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Where the light breaks over the horizon: a white core fading to the
+   primary blue. Only its opacity animates (a slow breath). closest-side makes
+   it reach zero at its own box edge, so no box outline ever shows. */
+.lp-ring::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  width: 40%;
+  height: 28px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.9) 0%, rgba(77, 139, 255, 0.5) 42%, rgba(0, 82, 255, 0) 100%);
+  pointer-events: none;
+  animation: lp-breathe 6s ease-in-out 1.4s infinite;
+}
+
+/* Light spilling onto the ground under the rim, behind the headline. */
+.lp-horizon {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: calc(var(--rim) - 110px);
+  width: min(100%, 1100px);
+  height: 240px;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(77, 139, 255, 0.26), rgba(0, 82, 255, 0) 100%);
+  pointer-events: none;
+}
+
+.lp-cine-content {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: calc(var(--rim) + 40px) 20px 112px;
+}
+
+/* Same face, weight and tracking as the app's page titles, just larger. */
+.lp-cine-title {
+  font-size: clamp(38px, 6vw, 76px);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: #ffffff;
+  text-wrap: balance;
+}
+.lp-cine-accent {
+  color: #4d8bff;
+}
+
+.lp-cine-lede {
+  margin-top: 20px;
+  max-width: 34rem;
+  font-size: clamp(16px, 1.35vw, 18px);
+  line-height: 1.6;
+  color: #a8acb3;
+  text-wrap: pretty;
+}
+
+.lp-cine-actions {
+  margin-top: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+.btn.lp-cine-cta {
+  height: 48px;
+  padding: 0 24px;
+  font-size: 15px;
+  box-shadow: 0 10px 36px -10px rgba(0, 82, 255, 0.85);
+}
+.btn.lp-cine-cta svg {
+  transition: transform 150ms ease;
+}
+.btn.lp-cine-cta:hover svg {
+  transform: translateX(2px);
+}
+.btn.lp-cine-ghost {
+  height: 48px;
+  padding: 0 24px;
+  font-size: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.btn.lp-cine-ghost:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+.btn.lp-cine-cta:focus-visible,
+.btn.lp-cine-ghost:focus-visible {
+  outline: 2px solid #a9c8ff;
+  outline-offset: 3px;
+}
+
+.lp-cine-note {
+  margin-top: 16px;
+  font-size: 13px;
+  color: #868c94;
+}
+
+/* Phones: the rim sits higher so the headline, buttons and note all fit on
+   the first screen, and the two buttons stay side by side down to ~370px. */
+@media (max-width: 639px) {
+  .lp-cine {
+    --rim: clamp(170px, 26vh, 240px);
+    --rim: clamp(170px, 26svh, 240px);
+  }
+  .lp-cine-content {
+    padding-top: calc(var(--rim) + 28px);
+    padding-bottom: 72px;
+  }
+  .lp-cine-lede {
+    margin-top: 16px;
+  }
+  .lp-cine-actions {
+    margin-top: 26px;
+    gap: 10px;
+  }
+  .btn.lp-cine-cta,
+  .btn.lp-cine-ghost {
+    height: 46px;
+    padding: 0 15px;
+    font-size: 14px;
+  }
+}
+
+@keyframes lp-ring-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(48px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+@keyframes lp-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-ring,
+  .lp-ring::after,
+  .btn.lp-cine-cta svg {
+    animation: none;
+    transition: none;
+  }
+}
+
 /* Theme switch icon: dark shows the sun (go light), light shows the moon. */
 :root:not([data-theme='light']) .lp-icon-moon,
 :root[data-theme='light'] .lp-icon-sun {
