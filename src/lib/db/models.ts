@@ -240,6 +240,8 @@ export interface PublicationDoc {
   metrics: PublicationMetrics | null;
   /** Prevents the engagement feedback nudge from being applied twice. */
   feedbackAppliedAt: Date | null;
+  /** Append the "Posted from conceptcast" line when this row is published. */
+  watermark: boolean;
   createdAt: Date;
 }
 
@@ -267,6 +269,7 @@ const PublicationSchema = new Schema<PublicationDoc>({
     default: null,
   },
   feedbackAppliedAt: { type: Date, default: null },
+  watermark: { type: Boolean, required: true, default: false },
   createdAt: { type: Date, required: true, default: () => new Date() },
 });
 

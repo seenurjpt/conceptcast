@@ -12,6 +12,7 @@ import {
 } from './db/models';
 import { publishPost, fetchSocialMetrics, LinkedInPublishError } from './publishers/linkedin';
 import { applyEngagementFeedback } from './feedback';
+import { LINKEDIN_HARD_CAP, withWatermark } from './watermark';
 
 export const MAX_PUBLISH_ATTEMPTS = 3;
 
@@ -25,8 +26,13 @@ export interface ApproveResult {
 /**
  * Approve a pending draft and schedule it. No `scheduledFor` means "now":
  * the row is due immediately and the caller decides whether to publish inline.
+ * `watermark` is stored on the row so a scheduled post honours it later.
  */
-export async function approveDraft(draftId: Types.ObjectId | string, scheduledFor?: Date): Promise<ApproveResult> {
+export async function approveDraft(
+  draftId: Types.ObjectId | string,
+  scheduledFor?: Date,
+  opts: { watermark?: boolean } = {},
+): Promise<ApproveResult> {
   const draft = await Draft.findOneAndUpdate(
     { _id: draftId, status: { $in: ['pending', 'approved'] } },
     { $set: { status: 'approved' } },
@@ -38,7 +44,7 @@ export async function approveDraft(draftId: Types.ObjectId | string, scheduledFo
   const publication = await Publication.findOneAndUpdate(
     { draftId: draft._id },
     {
-      $set: { scheduledFor: when, status: 'scheduled', error: null },
+      $set: { scheduledFor: when, status: 'scheduled', error: null, watermark: opts.watermark ?? false },
       $setOnInsert: { conceptId: draft.conceptId, attempts: 0, createdAt: new Date() },
     },
     { upsert: true, new: true },
@@ -111,8 +117,16 @@ export async function publishPublication(publicationId: Types.ObjectId | string)
     return { publicationId: String(claimed._id), status: 'failed', error: 'Draft missing' };
   }
 
+  // Rows created before the field existed have no value: treat as off.
+  const text = withWatermark(draft.body, claimed.watermark === true);
+  if (text.normalize('NFC').length > LINKEDIN_HARD_CAP) {
+    const error = `Post is ${text.length} characters with the watermark; LinkedIn allows ${LINKEDIN_HARD_CAP}. Shorten it or turn the watermark off.`;
+    await Publication.updateOne({ _id: claimed._id }, { $set: { status: 'failed', error } });
+    return { publicationId: String(claimed._id), status: 'failed', error };
+  }
+
   try {
-    const { postUrn } = await publishPost(draft.body);
+    const { postUrn } = await publishPost(text);
     const publishedAt = new Date();
     await Publication.updateOne(
       { _id: claimed._id },

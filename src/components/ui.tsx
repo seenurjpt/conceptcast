@@ -243,3 +243,42 @@ export function CharMeter({ count, min, max }: { count: number; min: number; max
     </div>
   );
 }
+
+/* ── switch ───────────────────────────────────────────────────────────────── */
+
+/** An accessible on/off switch: a button with role="switch", label and optional hint beside it. */
+export function Switch({
+  checked,
+  onChange,
+  label,
+  hint,
+  disabled,
+  id,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: React.ReactNode;
+  hint?: React.ReactNode;
+  disabled?: boolean;
+  id?: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <button
+        id={id}
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        className="switch"
+        onClick={() => onChange(!checked)}
+      >
+        <span className="switch-thumb" aria-hidden="true" />
+      </button>
+      <label htmlFor={id} className="min-w-0 cursor-pointer select-none">
+        <span className="t-body-sm block font-medium text-ink">{label}</span>
+        {hint && <span className="t-caption mt-0.5 block text-muted">{hint}</span>}
+      </label>
+    </div>
+  );
+}

@@ -15,8 +15,27 @@ import {
   PageHeader,
   ScoreBadge,
   Segmented,
+  Switch,
   TrackBadge,
 } from '@/components/ui';
+import { APP_URL, WATERMARK_LINE, watermarkWouldOverflow } from '@/lib/watermark';
+
+/** Per-browser memory of the last watermark choice. Off until the author turns it on. */
+const WATERMARK_PREF_KEY = 'cc_watermark';
+function readWatermarkPref(): boolean {
+  try {
+    return localStorage.getItem(WATERMARK_PREF_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function writeWatermarkPref(on: boolean): void {
+  try {
+    localStorage.setItem(WATERMARK_PREF_KEY, on ? '1' : '0');
+  } catch {
+    /* private mode: the choice just is not remembered */
+  }
+}
 
 type Status = 'pending' | 'approved' | 'published' | 'rejected';
 const ANGLES = ['mechanism', 'misconception', 'tradeoff', 'debug-story'] as const;
@@ -230,6 +249,9 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
   const [when, setWhen] = useState('');
   const [angle, setAngle] = useState<(typeof ANGLES)[number]>('mechanism');
   const [pane, setPane] = useState<'draft' | 'research' | 'critique'>('draft');
+  const [watermark, setWatermark] = useState(false);
+  useEffect(() => setWatermark(readWatermarkPref()), []);
+  const watermarkOverflow = watermark && watermarkWouldOverflow(body);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const violations = useMemo(() => checkHardConstraints(body), [body]);
@@ -270,7 +292,9 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
         ? 'Scroll to the end of the draft to enable approving.'
         : !canPublish && !when
           ? 'Sign in with LinkedIn to publish now, or pick a time to schedule it.'
-          : null;
+          : watermarkOverflow
+            ? 'With the watermark this post passes LinkedIn’s 3000 character limit. Shorten it or turn the watermark off.'
+            : null;
 
   return (
     <div className="min-w-0 space-y-4">
@@ -550,6 +574,27 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                   <p className="t-caption mt-1.5 text-muted">Leave empty to publish immediately.</p>
                 </div>
 
+                <div className="border-t border-hairline pt-3">
+                  <Switch
+                    id="watermark"
+                    checked={watermark}
+                    onChange={(on) => {
+                      setWatermark(on);
+                      writeWatermarkPref(on);
+                    }}
+                    label="Add “Posted from conceptcast”"
+                    hint="A line under the post linking readers to the app."
+                  />
+                  {watermark && (
+                    <p className="watermark-preview t-caption mt-2 text-body">
+                      {WATERMARK_LINE.replace(APP_URL, '')}
+                      <a className="text-primary hover:underline" href={APP_URL} target="_blank" rel="noreferrer">
+                        {APP_URL}
+                      </a>
+                    </p>
+                  )}
+                </div>
+
                 {approveBlocker && <p className="t-caption text-muted">{approveBlocker}</p>}
 
                 <ActionButton
@@ -562,7 +607,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                       const r = await sendJson<{ outcome: { status: string; error?: string; postUrn?: string } }>(
                         `/api/drafts/${draft._id}/approve`,
                         'POST',
-                        { scheduledFor },
+                        { scheduledFor, watermark },
                       );
                       if (r.outcome.status === 'published') return `Published to LinkedIn: ${r.outcome.postUrn}`;
                       if (r.outcome.status === 'failed') throw new Error(`Approved, but publishing failed: ${r.outcome.error}`);
