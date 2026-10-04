@@ -1477,14 +1477,19 @@ html {
 }
 
 /*
- * Full-screen fixed layers (modal backdrop, mobile menu) are laid out inside
- * the scrollbar gutters reserved on <html>, which would leave undimmed strips
- * down both edges. This negative margin is exactly one measured gutter per
- * side. It is not derived from 100vw: newer Chromium (Brave, Chrome) makes vw
- * exclude a reserved gutter, which zeroed the earlier vw-based formula.
+ * While a dialog or the mobile menu is open (lockPage() in lib/pageLock.ts
+ * adds .overlay-open and hides the page's overflow), release the scrollbar
+ * gutters <html> reserves on both edges.
+ *
+ * Chromium never paints a fixed overlay into those strips, so they stayed
+ * bright beside the dimmed page, and any attempt to tint or cover them left a
+ * one-pixel seam where the overlay is clipped. With the gutters gone the
+ * overlay covers the whole window: no strips, no seam, blur intact.
+ *
+ * Nothing visibly moves: the gutters are equal on both sides, so centred
+ * content keeps its position when they go. Only content narrower than its
+ * max-width (small windows) widens slightly, behind the dimmed backdrop.
  */
-.cover-gutters {
-  /* Widths measured at runtime by GUTTER_SCRIPT in app/layout.tsx; 0 until then and where scrollbars overlay. */
-  margin-left: calc(-1 * var(--gutter-left, 0px));
-  margin-right: calc(-1 * var(--gutter-right, 0px));
+html.overlay-open {
+  scrollbar-gutter: auto;
 }

@@ -38,19 +38,6 @@ export const viewport: Viewport = {
  */
 const THEME_SCRIPT = `try{var t=localStorage.getItem('theme')||(location.pathname==='/'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));document.documentElement.dataset.theme=t}catch(e){}`;
 
-/**
- * Measures the scrollbar gutters <html> reserves on each edge and publishes
- * them as --gutter-left / --gutter-right, which .cover-gutters uses to stretch
- * full-screen layers (dialog backdrop, mobile menu) over those strips.
- *
- * Measured, not computed from 100vw: browsers disagree on whether vw includes
- * a reserved gutter, and newer Chromium excludes it, which makes any vw
- * formula come out as zero. A fixed box with left/right 0 starts and ends
- * exactly where the gutters do in every browser. Written to a <style> tag so
- * no React-managed element is mutated. Re-measured on resize and zoom.
- */
-const GUTTER_SCRIPT = `(function(){var s=document.createElement('style');s.id='gutter-vars';document.head.appendChild(s);function m(){try{var p=document.createElement('div');p.style.cssText='position:fixed;left:0;right:0;top:0;height:0;visibility:hidden;pointer-events:none';document.body.appendChild(p);var r=p.getBoundingClientRect();var l=Math.max(0,Math.round(r.left)),g=Math.max(0,Math.round(window.innerWidth-r.right));p.remove();s.textContent=':root{--gutter-left:'+l+'px;--gutter-right:'+g+'px}'}catch(e){}}m();window.addEventListener('resize',m)})();`;
-
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -61,7 +48,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {/* The landing and login screens have no nav or session, so that chrome
             lives in the (dashboard) group. */}
         <DialogProvider>{children}</DialogProvider>
-        <script dangerouslySetInnerHTML={{ __html: GUTTER_SCRIPT }} />
       </body>
     </html>
   );

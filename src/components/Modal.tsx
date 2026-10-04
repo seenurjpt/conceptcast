@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { lockPage } from '@/lib/pageLock';
 
 /**
  * Replaces window.confirm / window.prompt, which ignore the design system and
@@ -119,14 +120,8 @@ function Dialog({ pending, onClose }: { pending: Pending; onClose: (v: boolean |
     return () => document.removeEventListener('keydown', onKey);
   }, [isPrompt, onClose]);
 
-  // The page behind must not scroll while a dialog is open.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
+  // The page behind must not scroll, and its edge strips dim with it.
+  useEffect(() => lockPage(), []);
 
   const opts = pending.opts;
   const promptOpts = isPrompt ? (opts as PromptOptions) : null;
@@ -144,7 +139,7 @@ function Dialog({ pending, onClose }: { pending: Pending; onClose: (v: boolean |
 
   return (
     <div
-      className="cover-gutters fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dialog-title"

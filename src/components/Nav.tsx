@@ -8,6 +8,7 @@ import { useSession } from './SessionProvider';
 import { LogoMark } from './Logo';
 import { useDialog } from './Modal';
 import { fmtDay } from '@/lib/ui';
+import { lockPage } from '@/lib/pageLock';
 
 /** Ordered by the actual flow: pick a topic, review the draft, see what shipped. */
 const LINKS = [
@@ -91,13 +92,12 @@ function MobileMenu({ open, onClose, path }: { open: boolean; onClose: () => voi
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', onKey);
-    // The page behind must not scroll while the drawer is over it.
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    // The page behind must not scroll, and its edge strips dim with it.
+    const unlock = lockPage();
     panelRef.current?.querySelector<HTMLElement>('a')?.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+      unlock();
     };
   }, [open, onClose]);
 
@@ -105,7 +105,7 @@ function MobileMenu({ open, onClose, path }: { open: boolean; onClose: () => voi
 
   return (
     // z-40 clears the sticky header's z-30 so the drawer covers it.
-    <div className="cover-gutters fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+    <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
       <div
         ref={panelRef}
