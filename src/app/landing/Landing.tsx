@@ -1,8 +1,12 @@
 import Link from 'next/link';
 import { LogoMark } from '@/components/Logo';
+import { SITE_AUTHOR } from '@/lib/site';
 import { Dock } from './Dock';
 import { FAQ } from './faq';
+import { FaqItem } from './FaqItem';
 import { Hero } from './Hero';
+import { Features } from './Features';
+import { HowItWorks } from './HowItWorks';
 import { LoopVideo } from './LoopVideo';
 
 /**
@@ -18,22 +22,6 @@ import { LoopVideo } from './LoopVideo';
  * below-the-fold sections use content-visibility so the browser skips their
  * layout and paint until they scroll close.
  */
-
-const STEPS: [string, string, string][] = [
-  ['01', 'Name what you are learning', 'System design, Postgres internals, Kubernetes, or anything else. It suggests about ten subtopics, or you add your own.'],
-  ['02', 'Pick a subtopic, click Write a post', 'It researches that one idea on the web against primary sources. Every fact carries a URL; shaky ones are dropped.'],
-  ['03', 'It drafts and critiques itself', 'Three angles, scored against a depth rubric. Weak drafts get killed, not shipped. One revision pass if needed.'],
-  ['04', 'You decide what goes out', 'The draft waits with its sources one click away. Publish to LinkedIn, edit it, or bin it.'],
-];
-
-const FEATURES: [string, string][] = [
-  ['Mechanisms, not news', 'Posts explain how something works and why it matters, so they are still correct in a year. News decays in a day.'],
-  ['Research first', 'Nothing is written from memory. The researcher reads papers, docs and code, then hands the writer sourced facts only.'],
-  ['Your voice', 'Paste a handful of your own posts once. The writer copies the shape and rhythm, never the content.'],
-  ['A critic that says no', 'Every draft is scored on depth, surprise and applicability. Anything that would embarrass you never reaches your queue.'],
-  ['Your key, your cost', 'Bring an Anthropic, OpenAI or Gemini key. Gemini has a free tier, so the whole loop can cost nothing.'],
-  ['You approve every post', 'Nothing runs on a schedule and nothing is published without your click. The app drafts; you decide.'],
-];
 
 export function Landing() {
   return (
@@ -80,47 +68,10 @@ export function Landing() {
       </section>
 
       {/* ── how it works ───────────────────────────────────────────────── */}
-      <section id="how" aria-labelledby="how-title" className="cv-auto scroll-mt-24 border-b border-hairline">
-        <div className="mx-auto max-w-[1120px] px-4 py-14 sm:px-6 sm:py-20">
-          <div className="max-w-2xl">
-            <p className="label">How it works</p>
-            <h2 id="how-title" className="mt-2 text-[clamp(26px,3.4vw,38px)] leading-tight tracking-[-0.8px]">
-              Four steps, and you are at both ends
-            </h2>
-          </div>
-          <ol className="mt-10 grid gap-x-10 gap-y-8 sm:grid-cols-2">
-            {STEPS.map(([n, title, body]) => (
-              <li key={n} className="flex gap-4">
-                <span className="t-number shrink-0 pt-1 text-[13px] text-muted">{n}</span>
-                <div className="min-w-0">
-                  <h3 className="text-[17px] font-semibold leading-snug">{title}</h3>
-                  <p className="mt-1.5 text-[14px] leading-relaxed text-body">{body}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
+      <HowItWorks />
 
       {/* ── why ────────────────────────────────────────────────────────── */}
-      <section aria-label="What makes it different" className="cv-auto border-b border-hairline bg-surface-soft">
-        <div className="mx-auto max-w-[1120px] px-4 py-14 sm:px-6 sm:py-20">
-          <div className="max-w-2xl">
-            <p className="label">What makes it different</p>
-            <h2 className="mt-2 text-[clamp(26px,3.4vw,38px)] leading-tight tracking-[-0.8px]">
-              Built to be wrong less often than you are
-            </h2>
-          </div>
-          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(([title, body]) => (
-              <li key={title} className="card">
-                <h3 className="text-[16px] font-semibold leading-snug">{title}</h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-body">{body}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+      <Features />
 
       {/* ── keys ───────────────────────────────────────────────────────── */}
       <section id="keys" aria-label="Pricing and AI keys" className="cv-auto scroll-mt-24 border-b border-hairline">
@@ -166,15 +117,7 @@ export function Landing() {
           </h2>
           <div className="mt-8 divide-y divide-hairline border-y border-hairline">
             {FAQ.map(({ q, a }) => (
-              <details key={q} className="faq py-1">
-                <summary className="flex cursor-pointer items-center justify-between gap-4 py-4">
-                  <h3 className="text-[16px] font-semibold leading-snug">{q}</h3>
-                  <span aria-hidden className="faq-icon shrink-0 text-[20px] leading-none text-muted">
-                    +
-                  </span>
-                </summary>
-                <p className="pb-5 pr-8 text-[15px] leading-relaxed text-body">{a}</p>
-              </details>
+              <FaqItem key={q} q={q} a={a} />
             ))}
           </div>
         </div>
@@ -217,6 +160,21 @@ export function Landing() {
               Sign in
             </Link>
           </nav>
+          <p className="flex w-full items-center gap-1.5 sm:w-auto">
+            Built by
+            <a
+              href={SITE_AUTHOR.url}
+              target="_blank"
+              rel="noopener noreferrer me author"
+              className="inline-flex items-center gap-1.5 font-semibold text-[color:var(--lp-ink-2)] hover:text-[color:var(--lp-ink)]"
+            >
+              <svg aria-hidden width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+              </svg>
+              {SITE_AUTHOR.name}
+              <span className="sr-only">(GitHub, opens in a new tab)</span>
+            </a>
+          </p>
         </div>
       </footer>
     </div>

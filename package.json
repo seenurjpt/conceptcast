@@ -2,6 +2,7 @@
   "name": "conceptcast",
   "version": "0.1.0",
   "private": true,
+  "author": "Sunny Rajput (https://github.com/seenurjpt)",
   "scripts": {
     "dev": "next dev --turbopack -p 3001",
     "build": "next build --turbopack",

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site';
+import { SITE_AUTHOR, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site';
 import { Landing } from './landing/Landing';
 import { FAQ } from './landing/faq';
 
@@ -36,9 +36,18 @@ export const metadata: Metadata = {
   },
 };
 
+const AUTHOR = {
+  '@type': 'Person',
+  '@id': `${SITE_URL}/#author`,
+  name: SITE_AUTHOR.name,
+  url: SITE_AUTHOR.url,
+  sameAs: [SITE_AUTHOR.url],
+};
+
 const STRUCTURED_DATA = {
   '@context': 'https://schema.org',
   '@graph': [
+    AUTHOR,
     {
       '@type': 'WebSite',
       '@id': `${SITE_URL}/#website`,
@@ -46,6 +55,7 @@ const STRUCTURED_DATA = {
       name: SITE_NAME,
       description: SITE_DESCRIPTION,
       inLanguage: 'en',
+      publisher: { '@id': `${SITE_URL}/#author` },
     },
     {
       '@type': 'SoftwareApplication',
@@ -53,6 +63,8 @@ const STRUCTURED_DATA = {
       name: SITE_NAME,
       url: `${SITE_URL}/`,
       description: SITE_DESCRIPTION,
+      author: { '@id': `${SITE_URL}/#author` },
+      creator: { '@id': `${SITE_URL}/#author` },
       applicationCategory: 'BusinessApplication',
       applicationSubCategory: 'Content creation',
       operatingSystem: 'Web',

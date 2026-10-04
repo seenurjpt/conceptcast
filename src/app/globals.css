@@ -121,14 +121,21 @@
   --radius-pill: 100px;
 }
 
-* {
-  border-color: var(--hairline);
-}
+/* Element defaults live in the base layer. Unlayered rules beat every
+   Tailwind utility regardless of specificity, so a bare `* { border-color }`
+   here silently overrode every border-colour utility in the app
+   (border-white/10, border-primary/60, ...). In @layer base the hairline is
+   still the default, and utilities can override it as written. */
+@layer base {
+  * {
+    border-color: var(--hairline);
+  }
 
-body {
-  background: var(--canvas);
-  color: var(--ink);
-  -webkit-font-smoothing: antialiased;
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
 /* ── type ─────────────────────────────────────────────────────────────────── */
@@ -977,6 +984,17 @@ select.input {
   }
 }
 
+/* Sign-in page, left panel: the landing hero's sky. Pure black with the app's
+   blue light from the top right and a softer pool bottom left, drawn as plain
+   gradients (no blur filter). Dark in both themes, like the hero. */
+.login-hero {
+  color: #ffffff;
+  background:
+    radial-gradient(560px circle at 100% 0%, rgba(0, 82, 255, 0.28), rgba(0, 82, 255, 0) 70%),
+    radial-gradient(480px circle at 0% 100%, rgba(77, 139, 255, 0.12), rgba(77, 139, 255, 0) 70%),
+    #000000;
+}
+
 /* Theme switch icon: dark shows the sun (go light), light shows the moon. */
 :root:not([data-theme='light']) .lp-icon-moon,
 :root[data-theme='light'] .lp-icon-sun {
@@ -999,6 +1017,262 @@ select.input {
   contain-intrinsic-size: auto 720px;
 }
 
+/* ── how it works: timeline ───────────────────────────────────────────────
+   Phones and tablets: one column, the rail runs down the left edge with a
+   node beside each card. Desktop: four columns, the rail runs across the
+   top through the nodes. The "you" steps (first and last) are filled blue. */
+.hiw {
+  position: relative;
+  margin-top: 48px;
+}
+.hiw-list {
+  display: grid;
+  /* minmax(0, 1fr): long unbroken lines inside the illustrations must
+     truncate, not widen the column past the screen. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  padding-left: 48px;
+  list-style: none;
+}
+.hiw-rail {
+  position: absolute;
+  left: 15px;
+  top: 16px;
+  bottom: 40px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+.hiw-rail-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--primary), var(--primary) 70%, rgba(0, 82, 255, 0.25));
+  transform-origin: top center;
+}
+.hiw-step {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.hiw-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  margin-bottom: 14px;
+}
+.hiw-node {
+  position: absolute;
+  left: -48px;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 100px;
+  border: 2px solid var(--hairline);
+  background: var(--canvas);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hiw-node.is-you {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 0 0 6px rgba(0, 82, 255, 0.14);
+}
+.hiw-tag {
+  border-radius: 100px;
+  border: 1px solid var(--hairline);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  background: var(--canvas);
+}
+.hiw-tag.is-you {
+  border-color: transparent;
+  background: linear-gradient(rgba(0, 82, 255, 0.14), rgba(0, 82, 255, 0.14)), var(--canvas);
+  color: var(--primary);
+}
+.hiw-card {
+  flex: 1;
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  background: var(--surface-card);
+  padding: 14px 14px 20px;
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+.hiw-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(77, 139, 255, 0.45);
+  box-shadow: 0 18px 40px -24px rgba(0, 82, 255, 0.45);
+}
+/* The illustration well: a soft surface with a faint dot grid. */
+.hiw-visual {
+  height: 164px;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid var(--hairline-soft);
+  background-color: var(--surface-soft);
+  background-image: radial-gradient(var(--hairline) 1px, transparent 1.2px);
+  background-size: 14px 14px;
+  padding: 14px;
+}
+.hiw-caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 14px;
+  margin-left: 2px;
+  background: var(--primary);
+  animation: hiw-blink 1.1s steps(1) infinite;
+}
+.hiw-progress {
+  width: 72%;
+  transform-origin: left center;
+}
+
+@media (min-width: 1024px) {
+  .hiw-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+    padding-left: 0;
+  }
+  /* Across the top, from the first node's centre to the last node's centre. */
+  .hiw-rail {
+    left: 16px;
+    right: calc((100% - 60px) / 4 - 16px);
+    top: 15px;
+    bottom: auto;
+    width: auto;
+    height: 2px;
+  }
+  .hiw-rail-fill {
+    background: linear-gradient(90deg, var(--primary), var(--primary) 70%, rgba(0, 82, 255, 0.25));
+    transform-origin: left center;
+  }
+  .hiw-node {
+    position: static;
+  }
+  .hiw-head {
+    margin-bottom: 18px;
+  }
+}
+
+@keyframes hiw-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Scroll-driven motion where supported: the rail draws itself and the cards
+   rise in, one after another, as the section scrolls into view. Elsewhere
+   (and under reduced motion) everything is simply in its final state. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .hiw-rail-fill {
+      animation: hiw-draw-y linear both;
+      animation-timeline: view();
+      animation-range: entry 30% cover 55%;
+    }
+    .hiw-step {
+      animation: hiw-rise linear both;
+      animation-timeline: view();
+      animation-range: entry calc(var(--i) * 6%) entry calc(55% + var(--i) * 6%);
+    }
+    .hiw-progress {
+      animation: hiw-grow linear both;
+      animation-timeline: view();
+      animation-range: entry 40% cover 50%;
+    }
+    @media (min-width: 1024px) {
+      .hiw-rail-fill {
+        animation-name: hiw-draw-x;
+      }
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hiw-caret {
+    animation: none;
+  }
+  .hiw-card {
+    transition: none;
+  }
+}
+@keyframes hiw-draw-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes hiw-draw-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes hiw-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hiw-grow {
+  from {
+    transform: scaleX(0.1);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ── what makes it different ─────────────────────────────────────────── */
+.feat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(0, 82, 255, 0.1);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px rgba(0, 82, 255, 0.16);
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    box-shadow 200ms ease;
+}
+.feat:hover .feat-icon {
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 8px 20px -10px rgba(0, 82, 255, 0.7);
+}
+@media (prefers-reduced-motion: reduce) {
+  .feat-icon {
+    transition: none;
+  }
+}
+
 /* FAQ uses native details/summary: works with no JavaScript in every browser. */
 .faq > summary {
   list-style: none;
@@ -1011,11 +1285,39 @@ select.input {
   outline-offset: 4px;
   border-radius: var(--radius-sm);
 }
-.faq-icon {
-  transition: transform 160ms ease;
+.faq-summary {
+  transition: color 150ms ease;
 }
-.faq[open] .faq-icon {
+.faq-summary:hover {
+  color: var(--primary);
+}
+/* The plus sits in a soft circle and turns into a cross as the panel opens. */
+.faq-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 100px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  transition:
+    transform 280ms cubic-bezier(0.2, 0, 0, 1),
+    background-color 200ms ease,
+    color 200ms ease;
+}
+.faq-summary:hover .faq-icon {
+  color: var(--ink);
+}
+.faq[data-open='true'] .faq-icon {
   transform: rotate(45deg);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+/* The animated panel clips its content while its height changes. */
+.faq-panel {
+  overflow: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {

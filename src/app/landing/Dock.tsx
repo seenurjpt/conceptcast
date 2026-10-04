@@ -65,12 +65,12 @@ export function Dock() {
 }
 
 /**
- * Light/dark switch for the landing page. Dark is the default; the choice is
- * stored under the same key as the dashboard's toggle, so it carries across.
- * Reads the theme the head script already applied instead of recomputing it,
- * so the icon always matches what is on screen.
+ * Light/dark switch for the public pages (landing dock and sign-in screen).
+ * The choice is stored under the same key as the dashboard's toggle, so it
+ * carries across the whole app. Reads the theme the head script already
+ * applied instead of recomputing it, so the icon always matches the screen.
  */
-function ThemeSwitch() {
+export function ThemeSwitch({ className = 'ml-auto' }: { className?: string }) {
   const [theme, setTheme] = useState<'dark' | 'light' | null>(null);
 
   useEffect(() => {
@@ -93,7 +93,7 @@ function ThemeSwitch() {
       }}
       aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
       title={dark ? 'Light theme' : 'Dark theme'}
-      className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[color:var(--lp-ink-2)] transition-colors hover:bg-[var(--lp-chip-hover)] hover:text-[color:var(--lp-ink)]"
+      className={`${className} flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[color:var(--lp-ink-2)] transition-colors hover:bg-[var(--lp-chip-hover)] hover:text-[color:var(--lp-ink)]`}
     >
       {/* Both icons are in the HTML and CSS shows the one for the current
           theme, so the right icon is there before hydration and without JS. */}

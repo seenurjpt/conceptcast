@@ -38,7 +38,7 @@ export function LoginPanel() {
 
   return (
     <div>
-      <h2 className="text-[28px] leading-tight tracking-[-0.5px]">Sign in</h2>
+      <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">Sign in</h2>
       <p className="mt-1.5 text-[14px] leading-snug text-body">
         conceptcast publishes to your own feed, so it signs you in with the account it will post as.
       </p>

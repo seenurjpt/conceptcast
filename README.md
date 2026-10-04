@@ -233,3 +233,7 @@ tests/                 node:test unit tests
 ```
 
 Every Anthropic call logs token usage to `data/usage.jsonl` and the `usages` collection (attributed to the concept). Static prompts and the voice profile sit before a cache breakpoint so repeated calls hit the prompt cache.
+
+## Author
+
+Built by **Sunny Rajput** ([@seenurjpt](https://github.com/seenurjpt)).

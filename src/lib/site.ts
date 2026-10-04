@@ -19,6 +19,12 @@ export const SITE_URL = resolveSiteUrl();
 
 export const SITE_NAME = 'conceptcast';
 
+/** Who built it: shown in the footer and declared in metadata and structured data. */
+export const SITE_AUTHOR = {
+  name: 'Sunny Rajput',
+  url: 'https://github.com/seenurjpt',
+} as const;
+
 export const SITE_TITLE = 'conceptcast: researched LinkedIn posts on what you are learning';
 
 /** Kept under about 160 characters: search results cut longer snippets. */

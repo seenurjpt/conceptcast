@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { DialogProvider } from '@/components/Modal';
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
+import { SITE_AUTHOR, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 
 // DESIGN.md documents these as the substitutes for the licensed Coinbase faces.
 // Self-hosted by next/font: no third-party request, and swap means text shows
@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
+  authors: [{ name: SITE_AUTHOR.name, url: SITE_AUTHOR.url }],
+  creator: SITE_AUTHOR.name,
+  publisher: SITE_AUTHOR.name,
   formatDetection: { telephone: false, email: false, address: false },
 };
 
