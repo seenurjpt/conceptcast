@@ -1494,6 +1494,17 @@ html.overlay-open {
   scrollbar-gutter: auto;
 }
 
+/*
+ * The public pages (landing and sign-in) are full-bleed: their dark panels
+ * run edge to edge. A gutter reserved on both edges shows there as a strip of
+ * page background beside the dark hero, so these pages keep only the real
+ * scrollbar. They do not need the gutter's job: the landing page always
+ * scrolls and the sign-in page never does, so nothing shifts sideways.
+ */
+html:has(.lp-page) {
+  scrollbar-gutter: auto;
+}
+
 /* Announcement posts ("I'm starting to learn X") share the brand accent. */
 .track-announcement {
   --track: var(--primary);

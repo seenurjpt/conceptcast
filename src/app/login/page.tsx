@@ -54,7 +54,7 @@ export default function LoginPage() {
   return (
     // h-dvh, not h-screen: dvh accounts for mobile browser chrome, which is the
     // usual reason a "100vh" page still scrolls on a phone.
-    <div className="flex min-h-dvh flex-col lg:grid lg:h-dvh lg:grid-cols-[1.05fr_minmax(400px,0.9fr)] lg:overflow-hidden">
+    <div className="lp-page flex min-h-dvh flex-col lg:grid lg:h-dvh lg:grid-cols-[1.05fr_minmax(400px,0.9fr)] lg:overflow-hidden">
       {/* Left: what this is. Hidden on small screens: on a phone the door matters
           more than the pitch, and keeping both would force a scroll. */}
       <section className="login-hero relative isolate hidden min-w-0 flex-col justify-between overflow-hidden px-10 py-10 lg:flex xl:px-14">

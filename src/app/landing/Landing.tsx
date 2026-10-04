@@ -25,7 +25,7 @@ import { LoopVideo } from './LoopVideo';
 
 export function Landing() {
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div className="lp-page min-h-dvh bg-canvas">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-[100px] focus:bg-primary focus:px-4 focus:py-2 focus:text-[14px] focus:font-semibold focus:text-white"
