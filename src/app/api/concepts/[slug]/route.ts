@@ -2,8 +2,11 @@ import { z } from 'zod';
 import { handler, ok, readJson, HttpError } from '@/lib/api';
 import { Concept, Draft, Research, type ConceptDoc, type DraftDoc, type ResearchDoc } from '@/lib/db/models';
 import { validateDag } from '@/lib/concepts/dag';
+import { kickResearchPool } from '@/lib/research/service';
 
 export const dynamic = 'force-dynamic';
+/** Edits can top up the research pool after the response. */
+export const maxDuration = 300;
 
 type Ctx = { params: Promise<{ slug: string }> };
 
@@ -50,6 +53,8 @@ export const PATCH = handler(async (req: Request, ctx: Ctx) => {
     }
   }
   const concept = await Concept.findOneAndUpdate({ slug }, { $set: body }, { new: true }).lean<ConceptDoc>();
+  // A relevance or status change can reorder the top of the research pool.
+  if (body.devRelevance !== undefined || body.status !== undefined) kickResearchPool('subtopic updated');
   return ok({ concept });
 });
 
@@ -62,5 +67,6 @@ export const DELETE = handler(async (_req: Request, ctx: Ctx) => {
     { new: true },
   ).lean<ConceptDoc>();
   if (!concept) throw new HttpError(404, 'Concept not found or not retirable.');
+  kickResearchPool('subtopic removed');
   return ok({ concept });
 });

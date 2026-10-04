@@ -18,34 +18,55 @@ interface Stage {
   messages: string[];
 }
 
-const STAGES: Stage[] = [
-  {
-    key: 'research',
-    label: 'Research',
-    startsAt: 0,
-    messages: [
-      'Fetching the primary sources',
-      'Reading the papers and docs',
-      'Pulling out the mechanism and the numbers',
-      'Listing the misconceptions worth correcting',
-    ],
-  },
-  {
-    key: 'write',
-    label: 'Write',
-    startsAt: 95,
-    messages: ['Drafting three angles in your voice', 'Tightening the hook to the mobile fold', 'Choosing the one idea per post'],
-  },
-  {
-    key: 'critique',
-    label: 'Critique',
-    startsAt: 135,
-    messages: ['Scoring each draft against the rubric', 'Checking every number has a source', 'Picking the winner, one revision if it is close'],
-  },
+const RESEARCH_MESSAGES = [
+  'Fetching the primary sources',
+  'Reading the papers and docs',
+  'Pulling out the mechanism and the numbers',
+  'Listing the misconceptions worth correcting',
+];
+const WRITE_MESSAGES = ['Drafting three angles in your voice', 'Tightening the hook to the mobile fold', 'Choosing the one idea per post'];
+const CRITIQUE_MESSAGES = [
+  'Scoring each draft against the rubric',
+  'Checking every number has a source',
+  'Picking the winner, one revision if it is close',
 ];
 
-/** Typical total; past this the bar just holds near the end. */
-const EXPECTED_SECONDS = 190;
+/**
+ * What the run has to do, and so how long it takes:
+ * - fresh: research from scratch, then write and critique.
+ * - researched: the background pool already did the research.
+ * - waiting: background research for this subtopic is still running; the
+ *   server waits for it rather than starting a second run.
+ */
+export type ProgressMode = 'fresh' | 'researched' | 'waiting';
+
+/** startsAt < 0 means the stage was already done before the click. */
+const TIMELINES: Record<ProgressMode, { stages: Stage[]; expected: number }> = {
+  fresh: {
+    expected: 190,
+    stages: [
+      { key: 'research', label: 'Research', startsAt: 0, messages: RESEARCH_MESSAGES },
+      { key: 'write', label: 'Write', startsAt: 95, messages: WRITE_MESSAGES },
+      { key: 'critique', label: 'Critique', startsAt: 135, messages: CRITIQUE_MESSAGES },
+    ],
+  },
+  researched: {
+    expected: 110,
+    stages: [
+      { key: 'research', label: 'Research', startsAt: -1, messages: [] },
+      { key: 'write', label: 'Write', startsAt: 0, messages: WRITE_MESSAGES },
+      { key: 'critique', label: 'Critique', startsAt: 45, messages: CRITIQUE_MESSAGES },
+    ],
+  },
+  waiting: {
+    expected: 160,
+    stages: [
+      { key: 'research', label: 'Research', startsAt: 0, messages: ['Finishing the research already running in the background'] },
+      { key: 'write', label: 'Write', startsAt: 60, messages: WRITE_MESSAGES },
+      { key: 'critique', label: 'Critique', startsAt: 100, messages: CRITIQUE_MESSAGES },
+    ],
+  },
+};
 
 function fmt(s: number): string {
   const m = Math.floor(s / 60);
@@ -53,7 +74,8 @@ function fmt(s: number): string {
   return `${m}:${String(r).padStart(2, '0')}`;
 }
 
-export function WritingProgress({ title, startedAt }: { title: string; startedAt: number }) {
+export function WritingProgress({ title, startedAt, mode = 'fresh' }: { title: string; startedAt: number; mode?: ProgressMode }) {
+  const { stages: STAGES, expected: EXPECTED_SECONDS } = TIMELINES[mode];
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -107,7 +129,9 @@ export function WritingProgress({ title, startedAt }: { title: string; startedAt
             </li>
           );
         })}
-        <li className="t-caption ml-auto text-muted-soft">Stages are estimated from elapsed time.</li>
+        <li className="t-caption ml-auto text-muted-soft">
+          {mode === 'researched' ? 'Research was done in the background. ' : ''}Stages are estimated from elapsed time.
+        </li>
       </ol>
     </div>
   );

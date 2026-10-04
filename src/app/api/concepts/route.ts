@@ -3,13 +3,17 @@ import { handler, ok, readJson, HttpError } from '@/lib/api';
 import { Concept, type ConceptDoc } from '@/lib/db/models';
 import { validateDag } from '@/lib/concepts/dag';
 import { releaseStaleClaims } from '@/lib/pipeline/generate';
+import { kickResearchPool } from '@/lib/research/service';
 
 export const dynamic = 'force-dynamic';
+/** Listing tops up the research pool after the response. */
+export const maxDuration = 300;
 
 /** GET /api/concepts?status=backlog&track=production */
 export const GET = handler(async (req: Request) => {
   // Put back anything an interrupted run left claimed, so it is visible again.
   await releaseStaleClaims();
+  kickResearchPool('backlog opened');
   const url = new URL(req.url);
   const filter: Record<string, unknown> = {};
   const status = url.searchParams.get('status');

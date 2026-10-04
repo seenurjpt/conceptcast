@@ -491,21 +491,78 @@ select.input {
   }
 }
 
-/* Scrollbars inside panels, so the review pane doesn't get a chunky OS bar. */
-.scroll-slim {
-  scrollbar-width: thin;
-  scrollbar-color: var(--hairline) transparent;
+/* ── scrollbars ───────────────────────────────────────────────────────────── */
+
+/*
+ * One scrollbar for the whole app, built from the theme tokens so it follows
+ * light, dark and the toggle: a neutral pill on a transparent track (the
+ * canvas shows through), darker on hover, the brand blue while dragging.
+ *
+ * Chrome, Edge and Safari are styled with ::-webkit-scrollbar. Firefox only
+ * understands scrollbar-color and scrollbar-width, and Chrome ignores the
+ * ::-webkit-scrollbar styles on any element that sets those, so they are
+ * given to Firefox alone through @supports below.
+ */
+:root {
+  --scrollbar-thumb: color-mix(in srgb, var(--muted) 38%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--muted) 72%, transparent);
+  --scrollbar-thumb-active: var(--primary);
+  /* Native controls (scrollbars, date pickers, select menus) match the theme. */
+  color-scheme: light;
 }
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* The page and every scroll area: a 6px pill inside a 14px gutter, 8px on hover. */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  min-height: 40px;
+  min-width: 40px;
+  border: 4px solid transparent;
+  border-radius: var(--radius-pill);
+  background-color: var(--scrollbar-thumb);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  border-width: 3px;
+  background-color: var(--scrollbar-thumb-hover);
+}
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--scrollbar-thumb-active);
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* Scroll areas inside panels (the review pane, menus, tab strips) use a slimmer pill. */
 .scroll-slim::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 .scroll-slim::-webkit-scrollbar-thumb {
-  background: var(--hairline);
-  border-radius: var(--radius-pill);
+  min-height: 32px;
+  min-width: 32px;
+  border-width: 3px;
 }
-.scroll-slim::-webkit-scrollbar-track {
-  background: transparent;
+.scroll-slim::-webkit-scrollbar-thumb:hover {
+  border-width: 2px;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  :root {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  .scroll-slim {
+    scrollbar-width: thin;
+  }
 }
 
 /* Avatars and icon plates are always full circles. */
@@ -1331,6 +1388,15 @@ select.input {
 
 html {
   scroll-behavior: smooth;
+  /*
+   * Reserve the scrollbar's width on both edges, always. Short pages and long
+   * pages then lay out identically, so nothing shifts sideways when the
+   * scrollbar appears, and the equal space on the left keeps content centred.
+   * It also covers the modal and mobile-menu scroll locks, which hide the
+   * scrollbar. Overlay scrollbars (phones, default macOS) take no width, so
+   * nothing is reserved there.
+   */
+  scrollbar-gutter: stable both-edges;
 }
 
 /* A row with a run in flight gets a faint tint so the eye lands on it in a long list. */
@@ -1396,4 +1462,29 @@ html {
   border: 1px dashed var(--hairline);
   background: var(--surface-soft);
   overflow-wrap: anywhere;
+}
+
+/* A subtopic being researched in the background: the badge breathes gently. */
+.research-running {
+  animation: research-breathe 1.8s ease-in-out infinite;
+}
+@keyframes research-breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .research-running { animation: none; }
+}
+
+/*
+ * Full-screen fixed layers (modal backdrop, mobile menu) are laid out inside
+ * the scrollbar gutters reserved on <html>, which would leave undimmed strips
+ * down both edges. This negative margin is exactly one measured gutter per
+ * side. It is not derived from 100vw: newer Chromium (Brave, Chrome) makes vw
+ * exclude a reserved gutter, which zeroed the earlier vw-based formula.
+ */
+.cover-gutters {
+  /* Widths measured at runtime by GUTTER_SCRIPT in app/layout.tsx; 0 until then and where scrollbars overlay. */
+  margin-left: calc(-1 * var(--gutter-left, 0px));
+  margin-right: calc(-1 * var(--gutter-right, 0px));
 }

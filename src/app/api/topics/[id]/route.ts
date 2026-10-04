@@ -3,8 +3,11 @@ import { handler, ok, readJson, HttpError, isObjectId } from '@/lib/api';
 import { requireUserId } from '@/lib/session';
 import { getTopic, listSubtopics, updateTopic, archiveTopic } from '@/lib/topics/service';
 import { releaseStaleClaims } from '@/lib/pipeline/generate';
+import { kickResearchPool } from '@/lib/research/service';
 
 export const dynamic = 'force-dynamic';
+/** Opening a topic tops up the research pool after the response. */
+export const maxDuration = 300;
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -17,6 +20,7 @@ export const GET = handler(async (_req: Request, ctx: Ctx) => {
   if (!topic) throw new HttpError(404, 'Topic not found.');
   // Put back anything an interrupted run left claimed, so it is writable again.
   await releaseStaleClaims();
+  kickResearchPool('topic page opened');
   return ok({ topic, subtopics: await listSubtopics(topic._id) });
 });
 

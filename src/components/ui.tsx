@@ -204,7 +204,14 @@ export function Segmented<T extends string>({
   }, [options.length]);
 
   return (
-    <div ref={ref} className={`scroll-slim -mx-1 max-w-full overflow-x-auto px-1 ${overflows ? 'scroll-fade' : ''}`}>
+    // -mx-1/px-1 give the pills' shadow room without clipping. The max width
+    // allows for that padding: capped at plain 100%, a parent that shrinks to
+    // fit the pills (the page header) leaves it 8px short, and it shows a
+    // scrollbar for an overflow nobody can see.
+    <div
+      ref={ref}
+      className={`scroll-slim -mx-1 max-w-[calc(100%+0.5rem)] overflow-x-auto px-1 ${overflows ? 'scroll-fade' : ''}`}
+    >
       <div className="inline-flex w-max gap-1 rounded-[100px] bg-surface-strong p-1">
         {options.map((o) => (
           <button

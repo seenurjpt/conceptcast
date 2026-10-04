@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getJson, sendJson } from '@/lib/ui';
 import { ActionButton, Card, Notice, PageHeader } from '@/components/ui';
 import { useDialog } from '@/components/Modal';
+import { ResearchPoolCard } from '@/components/ResearchPoolCard';
 
 type Provider = 'anthropic' | 'openai' | 'gemini';
 interface KeySummary {
@@ -46,6 +47,17 @@ export default function SettingsPage() {
       throw e;
     }
   };
+
+  // Stable, so the pool card's loader does not refetch on every render.
+  const showMessage = useCallback((msg: string, kind: 'ok' | 'error') => {
+    if (kind === 'ok') {
+      setError(null);
+      setNotice(msg);
+    } else {
+      setNotice(null);
+      setError(msg);
+    }
+  }, []);
 
   const none = keys !== null && keys.active.length === 0;
 
@@ -90,6 +102,8 @@ export default function SettingsPage() {
           ))}
         </div>
       </Card>
+
+      <ResearchPoolCard onMessage={showMessage} />
 
       <Card title="How keys are used">
         <ul className="t-body-sm list-disc space-y-1.5 pl-5 text-body">

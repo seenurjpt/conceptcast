@@ -2,14 +2,16 @@ import { z } from 'zod';
 import { handler, ok, readJson } from '@/lib/api';
 import { requireUserId } from '@/lib/session';
 import { listTopics, createTopic, suggestAndAddSubtopics } from '@/lib/topics/service';
+import { kickResearchPool } from '@/lib/research/service';
 
 export const dynamic = 'force-dynamic';
-/** Creating with suggestions makes one model call; give it room. */
-export const maxDuration = 90;
+/** Creating with suggestions makes one model call, and both handlers top up the research pool after responding. */
+export const maxDuration = 300;
 
 /** GET /api/topics → your topics plus the shared ones, each with subtopic counts. */
 export const GET = handler(async () => {
   const userId = await requireUserId();
+  kickResearchPool('topics list opened');
   return ok({ topics: await listTopics(userId) });
 });
 
@@ -32,6 +34,7 @@ export const POST = handler(async (req: Request) => {
   // the topic, report the failure, and let them retry from the topic page.
   try {
     const { added } = await suggestAndAddSubtopics(topic);
+    kickResearchPool('new topic with suggestions');
     return ok({ topic, subtopics: added, suggested: added.length }, 201);
   } catch (e) {
     return ok({ topic, subtopics: [], suggested: 0, suggestError: (e as Error).message }, 201);

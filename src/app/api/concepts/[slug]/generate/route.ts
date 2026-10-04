@@ -4,6 +4,7 @@ import { Concept, type ConceptDoc } from '@/lib/db/models';
 import { generateForConcept } from '@/lib/pipeline/generate';
 import { AngleSchema } from '@/lib/schemas';
 import { inngest, EVENTS } from '@/inngest/client';
+import { kickResearchPool } from '@/lib/research/service';
 
 export const dynamic = 'force-dynamic';
 /** The inline pipeline takes a few minutes (research with web search), but
@@ -20,6 +21,7 @@ const Body = z.object({
 
 /** POST /api/concepts/[slug]/generate: force-run the pipeline now. */
 export const POST = handler(async (req: Request, ctx: Ctx) => {
+  const startedAt = Date.now();
   const { slug } = await ctx.params;
   const body = await readJson(req, Body);
   const concept = await Concept.findOne({ slug }).lean<ConceptDoc>();
@@ -28,6 +30,10 @@ export const POST = handler(async (req: Request, ctx: Ctx) => {
   if (concept.status !== 'backlog' && !body.force) {
     throw new HttpError(409, `Concept is ${concept.status}; pass force:true to regenerate anyway.`);
   }
+  // This subtopic leaves the backlog, so the pool refills one more after the
+  // response. The deadline counts from now: the draft itself uses part of
+  // this function's time budget.
+  kickResearchPool('write started', { requestStartedAt: startedAt });
 
   if (pipelineMode() === 'inngest') {
     await inngest.send({

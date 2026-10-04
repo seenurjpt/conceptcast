@@ -88,6 +88,12 @@ export const users = {
     for (const [k, v] of Object.entries(llm)) $set['llm.' + k] = v;
     await (await col<UserDoc>(COLLECTIONS.users)).updateOne({ _id: userId }, { $set });
   },
+  async setPrefs(userId: string, prefs: Partial<NonNullable<UserDoc['prefs']>>): Promise<void> {
+    await this.ensure(userId);
+    const $set: Record<string, unknown> = { updatedAt: new Date() };
+    for (const [k, v] of Object.entries(prefs)) $set['prefs.' + k] = v;
+    await (await col<UserDoc>(COLLECTIONS.users)).updateOne({ _id: userId }, { $set });
+  },
 };
 
 /* ── voice_profiles ───────────────────────────────────────────────────────── */

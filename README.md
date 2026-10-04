@@ -156,6 +156,19 @@ A **Topic** is a main subject you are learning (`topics` collection: title, slug
 
 The seven legacy tracks (`coding-agents`, `workflow`, `codegen-quality`, `tooling`, `team-practice`, `economics`, `risk`) become shared topics the first time `GET /api/topics` runs; the migration is idempotent and attaches existing concepts by track. The suggestion prompt lives in [src/lib/prompts/suggest-subtopics.md](src/lib/prompts/suggest-subtopics.md), the service in [src/lib/topics/service.ts](src/lib/topics/service.ts).
 
+## Background research pool
+
+Research is the slowest stage, so the app keeps the author's top subtopics researched ahead of time. Writing one of those skips straight to drafting.
+
+- **Which subtopics.** The top 5 writable subtopics: in the backlog, prerequisites published, and not typed in by the author. Subtopics of topics you created rank before the shared seed, then by relevance plus any news boost, then oldest first. Subtopics you add yourself are researched when you click Write, at the usual speed.
+- **When it runs.** No cron and no extra service. Routes that can change the top 5 (opening Topics or a topic, Write a post, AI suggestions, accepting a proposal, editing relevance or removing a subtopic) call `kickResearchPool()`, which uses Next.js `after()` to research after the response is sent, inside the same function. At most 2 run at once, and a new round only starts if it can finish inside Vercel's 300s limit; the next trigger picks up the rest.
+- **No double research.** Every research run, background or Write, takes a lease on the subtopic (`researchState.lockedUntil`, 6 minutes). Write on a subtopic that is still being researched waits for that run. A run killed mid-way leaves no research behind, and its lease expires so the next trigger retakes it.
+- **Reuse and staleness.** Write reuses the newest research if it is fresh: 3 days for news topics, 30 days otherwise. A draft the critic kills keeps its research, so retrying is fast.
+- **Failures.** A failed background run is skipped for 24 hours and its slot goes to the next subtopic.
+- **Size.** Settings → Background research (0 to 10, 0 is off), or `RESEARCH_POOL_SIZE` as the default. Nothing runs without an API key.
+
+The rules are pure functions in [src/lib/research/pool.ts](src/lib/research/pool.ts) (unit-tested); the lease, waiting and background execution are in [src/lib/research/service.ts](src/lib/research/service.ts).
+
 ## Topics from the news
 
 The beat is AI-driven development: how engineers build software with AI. Topics come from two places.

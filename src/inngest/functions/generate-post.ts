@@ -7,7 +7,8 @@ import { inngest, EVENTS, type GenerateRequestedData } from '../client';
 import { dbConnect } from '@/lib/db/connect';
 import { Concept, Research, type ConceptDoc, type ResearchDoc } from '@/lib/db/models';
 import { selectNextConcept } from '@/lib/agents/selector';
-import { claimConcept, researchConcept, draftFromResearch, settleConcept } from '@/lib/pipeline/generate';
+import { claimConcept, draftFromResearch, settleConcept } from '@/lib/pipeline/generate';
+import { obtainResearch } from '@/lib/research/service';
 
 const CRON = process.env.GENERATE_CRON ?? 'TZ=Asia/Kolkata 0 6 * * 1,4';
 
@@ -51,7 +52,7 @@ export const generatePost = inngest.createFunction(
       const concept = await Concept.findById(selection.conceptId).lean<ConceptDoc>();
       if (!concept) throw new Error('concept vanished');
       try {
-        const research = await researchConcept(concept, (m) => logger.info(m));
+        const research = await obtainResearch(concept, (m) => logger.info(m));
         return String(research._id);
       } catch (e) {
         await Concept.updateOne(

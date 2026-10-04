@@ -1,9 +1,11 @@
 import { handler, ok, HttpError, isObjectId } from '@/lib/api';
 import { requireUserId } from '@/lib/session';
 import { getTopic, suggestAndAddSubtopics } from '@/lib/topics/service';
+import { kickResearchPool } from '@/lib/research/service';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 90;
+/** One model call, then new subtopics may join the research pool after the response. */
+export const maxDuration = 300;
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -15,5 +17,6 @@ export const POST = handler(async (_req: Request, ctx: Ctx) => {
   const topic = await getTopic(userId, id);
   if (!topic) throw new HttpError(404, 'Topic not found.');
   const { added, proposed } = await suggestAndAddSubtopics(topic);
+  kickResearchPool('subtopics suggested');
   return ok({ added, proposed, skipped: proposed - added.length });
 });

@@ -25,6 +25,13 @@ export const UserSchema = z.object({
     openaiKey: EncryptedBlobSchema.nullable().default(null),
     geminiKey: EncryptedBlobSchema.nullable().default(null),
   }),
+  /** Older user docs have no prefs; readers fall back to the defaults. */
+  prefs: z
+    .object({
+      /** Subtopics kept researched in the background. 0 turns the pool off. */
+      researchPoolSize: z.number().int().min(0).max(10).default(5),
+    })
+    .optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

@@ -1,8 +1,11 @@
 import { z } from 'zod';
 import { handler, ok, readJson, HttpError, isObjectId } from '@/lib/api';
 import { acceptProposal, rejectProposal } from '@/lib/concepts/proposals';
+import { kickResearchPool } from '@/lib/research/service';
 
 export const dynamic = 'force-dynamic';
+/** An accepted topic can join the research pool after the response. */
+export const maxDuration = 300;
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -16,6 +19,7 @@ export const POST = handler(async (req: Request, ctx: Ctx) => {
   if (action === 'accept') {
     try {
       const concept = await acceptProposal(id);
+      kickResearchPool('proposal accepted');
       return ok({ concept }, 201);
     } catch (e) {
       throw new HttpError(409, (e as Error).message);

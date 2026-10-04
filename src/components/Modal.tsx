@@ -144,7 +144,7 @@ function Dialog({ pending, onClose }: { pending: Pending; onClose: (v: boolean |
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="cover-gutters fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dialog-title"

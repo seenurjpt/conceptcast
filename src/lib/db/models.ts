@@ -36,8 +36,58 @@ export interface ConceptDoc {
   origin: 'seed' | 'proposal' | 'news' | 'user' | 'suggested';
   /** For news topics: when the story broke. */
   storyDate: Date | null;
+  /** Background research pool bookkeeping (lib/research). */
+  researchState: ResearchState;
   createdAt: Date;
 }
+
+export const RESEARCH_STATUSES = ['idle', 'running', 'ready', 'failed'] as const;
+export type ResearchStatus = (typeof RESEARCH_STATUSES)[number];
+
+/**
+ * Whether this subtopic has research waiting, and the lease that stops two
+ * runs researching it at once. `ready` is a cache of "the latest Research
+ * row is fresh"; freshness itself is judged from `readyAt` and the origin.
+ */
+export interface ResearchState {
+  status: ResearchStatus;
+  /** When the latest research finished. */
+  readyAt: Date | null;
+  researchId: Types.ObjectId | null;
+  /** A running lease expires here; a dead run is retaken after it. */
+  lockedUntil: Date | null;
+  startedAt: Date | null;
+  /** 'pool' = background prefetch; 'on-demand' = started by Write a post. */
+  source: 'pool' | 'on-demand' | null;
+  error: string | null;
+  /** After a failed background run the pool skips this subtopic until then. */
+  retryAfter: Date | null;
+}
+
+export const EMPTY_RESEARCH_STATE: ResearchState = {
+  status: 'idle',
+  readyAt: null,
+  researchId: null,
+  lockedUntil: null,
+  startedAt: null,
+  source: null,
+  error: null,
+  retryAfter: null,
+};
+
+const ResearchStateSchema = new Schema<ResearchState>(
+  {
+    status: { type: String, required: true, enum: RESEARCH_STATUSES, default: 'idle' },
+    readyAt: { type: Date, default: null },
+    researchId: { type: Schema.Types.ObjectId, ref: 'Research', default: null },
+    lockedUntil: { type: Date, default: null },
+    startedAt: { type: Date, default: null },
+    source: { type: String, enum: ['pool', 'on-demand', null], default: null },
+    error: { type: String, default: null },
+    retryAfter: { type: Date, default: null },
+  },
+  { _id: false },
+);
 
 const PrimarySourceSchema = new Schema<PrimarySourceDoc>(
   {
@@ -66,9 +116,11 @@ const ConceptSchema = new Schema<ConceptDoc>({
   note: { type: String, default: null },
   origin: { type: String, required: true, enum: ['seed', 'proposal', 'news', 'user', 'suggested'], default: 'seed' },
   storyDate: { type: Date, default: null },
+  researchState: { type: ResearchStateSchema, default: () => ({ ...EMPTY_RESEARCH_STATE }) },
   createdAt: { type: Date, required: true, default: () => new Date() },
 });
 ConceptSchema.index({ status: 1, track: 1 });
+ConceptSchema.index({ 'researchState.status': 1, 'researchState.lockedUntil': 1 });
 
 /* ── research ─────────────────────────────────────────────────────────────── */
 

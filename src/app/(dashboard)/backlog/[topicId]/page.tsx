@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { getJson, sendJson } from '@/lib/ui';
 import { SubtopicRow, type Subtopic } from '@/components/SubtopicRow';
+import { researchBadge } from '@/lib/research/pool';
 import { ActionButton, Card, EmptyState, Notice, PageHeader, Segmented, Stat } from '@/components/ui';
 
 interface Topic {
@@ -45,6 +46,15 @@ export default function TopicPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // While background research runs, refetch quietly so "researching" turns
+  // into "researched" without a reload. Stops once nothing is running.
+  const anyResearching = useMemo(() => subtopics.some((c) => researchBadge(c) === 'running'), [subtopics]);
+  useEffect(() => {
+    if (!anyResearching) return;
+    const id = setInterval(() => void load(), 15_000);
+    return () => clearInterval(id);
+  }, [anyResearching, load]);
 
   const run = async (fn: () => Promise<string | void>) => {
     setError(null);

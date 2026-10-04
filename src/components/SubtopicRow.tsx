@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { sendJson } from '@/lib/ui';
-import { WritingProgress } from './WritingProgress';
+import { WritingProgress, type ProgressMode } from './WritingProgress';
 import { ActionButton, TrackBadge } from './ui';
+import { researchBadge } from '@/lib/research/pool';
 
 export interface Subtopic {
   _id: string;
@@ -22,6 +23,15 @@ export interface Subtopic {
   primarySources: { type: string; url: string; title: string }[];
   origin?: 'seed' | 'proposal' | 'news' | 'user' | 'suggested';
   storyDate?: string | null;
+  /** Background research pool state; absent on rows older than the pool. */
+  researchState?: {
+    status: 'idle' | 'running' | 'ready' | 'failed';
+    readyAt: string | null;
+    lockedUntil: string | null;
+    retryAfter: string | null;
+    error: string | null;
+  } | null;
+  createdAt?: string;
 }
 
 /** "3d old" style age for news topics; null when there is no story date. */
@@ -52,6 +62,9 @@ export function SubtopicRow({
   const [rel, setRel] = useState(String(c.devRelevance));
   /** Epoch ms when a run started from this row; null when idle. Drives the progress view. */
   const [writingSince, setWritingSince] = useState<number | null>(null);
+  /** Fixed at click time: what the run has left to do. */
+  const [progressMode, setProgressMode] = useState<ProgressMode>('fresh');
+  const research = researchBadge(c);
   useEffect(() => setRel(String(c.devRelevance)), [c.devRelevance]);
   const unmet = showMetadata ? c.prerequisites.filter((p) => !publishedSlugs.has(p)) : [];
   const eligible = c.status === 'backlog' && unmet.length === 0;
@@ -76,6 +89,16 @@ export function SubtopicRow({
           )}
           {c.timelinessBoost > 0 && <span className="badge badge-attention">in the news +{c.timelinessBoost}</span>}
           {eligible && showMetadata && <span className="badge badge-quiet">ready</span>}
+          {research === 'ready' && (
+            <span className="badge badge-up" title="Research is done in the background, so writing skips straight to drafting.">
+              researched
+            </span>
+          )}
+          {research === 'running' && (
+            <span className="badge badge-quiet research-running" title="Researching in the background so this one is quick to write.">
+              researching
+            </span>
+          )}
         </div>
         {summary && <p className="t-body-sm mt-0.5 text-body">{summary}</p>}
         {unmet.length > 0 && <p className="t-caption mt-1 text-muted">Waiting on {unmet.join(', ')}</p>}
@@ -127,10 +150,16 @@ export function SubtopicRow({
             title={eligible ? 'Research, draft and critique this now' : 'Its prerequisites are not published yet, but it will still run'}
             confirm={{
               title: `Write a post about "${c.title}"?`,
-              body: 'It searches the web, drafts three angles, and critiques them. About three minutes and roughly $0.30 in tokens. The draft opens for review when it is done.',
+              body:
+                research === 'ready'
+                  ? 'Research is already done, so it drafts three angles and critiques them. Usually under two minutes and roughly $0.15 in tokens. The draft opens for review when it is done.'
+                  : research === 'running'
+                    ? 'Research is already running in the background; it finishes that, then drafts and critiques. Usually two to three minutes. The draft opens for review when it is done.'
+                    : 'It searches the web, drafts three angles, and critiques them. About three minutes and roughly $0.30 in tokens. The draft opens for review when it is done.',
               confirmLabel: 'Write it',
             }}
             onClick={async () => {
+              setProgressMode(research === 'ready' ? 'researched' : research === 'running' ? 'waiting' : 'fresh');
               setWritingSince(Date.now());
               try {
                 await run(async () => {
@@ -181,7 +210,7 @@ export function SubtopicRow({
           </ActionButton>
         )}
       </div>
-      {writingSince !== null && <WritingProgress title={c.title} startedAt={writingSince} />}
+      {writingSince !== null && <WritingProgress title={c.title} startedAt={writingSince} mode={progressMode} />}
     </li>
   );
 }

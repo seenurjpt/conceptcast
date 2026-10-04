@@ -105,7 +105,7 @@ function MobileMenu({ open, onClose, path }: { open: boolean; onClose: () => voi
 
   return (
     // z-40 clears the sticky header's z-30 so the drawer covers it.
-    <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+    <div className="cover-gutters fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
       <div
         ref={panelRef}
