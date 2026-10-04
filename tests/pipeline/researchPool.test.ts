@@ -8,6 +8,7 @@ import {
   researchBadge,
   type PoolCandidate,
 } from '@/lib/research/pool';
+import { isMine } from '@/lib/topics/helpers';
 
 const NOW = Date.parse('2026-10-04T12:00:00Z');
 const DAY = 86_400_000;
@@ -137,5 +138,18 @@ describe('research pool rules', () => {
     expect(researchBadge(cand({ status: 'published', researchState: ready(1) }), NOW)).toBe(null);
     expect(researchBadge(cand({ researchState: ready(40) }), NOW)).toBe(null);
     expect(researchBadge(cand(), NOW)).toBe(null);
+  });
+});
+
+
+describe('topic ownership', () => {
+  it('counts topics you created and shared topics you started, nothing else', () => {
+    expect(isMine({ ownerUserId: 'me', startedBy: [] }, 'me')).toBe(true);
+    expect(isMine({ ownerUserId: null, startedBy: ['me'] }, 'me')).toBe(true);
+    expect(isMine({ ownerUserId: null, startedBy: ['someone'] }, 'me')).toBe(false);
+    expect(isMine({ ownerUserId: null, startedBy: [] }, 'me')).toBe(false);
+    expect(isMine({ ownerUserId: null }, 'me')).toBe(false);
+    // Starting only applies to shared topics: someone else's topic never becomes yours.
+    expect(isMine({ ownerUserId: 'someone', startedBy: ['me'] }, 'me')).toBe(false);
   });
 });

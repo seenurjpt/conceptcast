@@ -1,6 +1,17 @@
 import { z } from 'zod';
 import { handler, ok, readJson, HttpError, isObjectId } from '@/lib/api';
-import { Draft, Concept, Research, Publication, type DraftDoc, type ConceptDoc, type ResearchDoc, type PublicationDoc } from '@/lib/db/models';
+import {
+  Draft,
+  Concept,
+  Research,
+  Publication,
+  Topic,
+  type DraftDoc,
+  type ConceptDoc,
+  type ResearchDoc,
+  type PublicationDoc,
+  type TopicDoc,
+} from '@/lib/db/models';
 import { editDraft, rejectDraft } from '@/lib/publishing';
 import { checkHardConstraints } from '@/lib/pipeline/constraints';
 
@@ -14,13 +25,24 @@ export const GET = handler(async (_req: Request, ctx: Ctx) => {
   if (!isObjectId(id)) throw new HttpError(400, 'Bad id.');
   const draft = await Draft.findById(id).lean<DraftDoc>();
   if (!draft) throw new HttpError(404, 'Draft not found.');
-  const [concept, research, publication, previous] = await Promise.all([
-    Concept.findById(draft.conceptId).lean<ConceptDoc>(),
-    Research.findById(draft.researchId).lean<ResearchDoc>(),
+  const kind = draft.kind ?? 'post';
+  // An announcement has no concept or research; it belongs to a main topic directly.
+  const [concept, research, publication, previous, topic] = await Promise.all([
+    draft.conceptId ? Concept.findById(draft.conceptId).lean<ConceptDoc>() : null,
+    draft.researchId ? Research.findById(draft.researchId).lean<ResearchDoc>() : null,
     Publication.findOne({ draftId: draft._id }).lean<PublicationDoc>(),
-    draft.critique.revisionOf ? Draft.findById(draft.critique.revisionOf).lean<DraftDoc>() : null,
+    draft.critique?.revisionOf ? Draft.findById(draft.critique.revisionOf).lean<DraftDoc>() : null,
+    draft.topicId ? Topic.findById(draft.topicId, { title: 1, description: 1 }).lean<Pick<TopicDoc, '_id' | 'title' | 'description'>>() : null,
   ]);
-  return ok({ draft, concept, research, publication, previous, constraintViolations: checkHardConstraints(draft.body) });
+  return ok({
+    draft: { ...draft, kind },
+    concept,
+    research,
+    publication,
+    previous,
+    topic,
+    constraintViolations: checkHardConstraints(draft.body, { kind }),
+  });
 });
 
 const Patch = z.object({
@@ -40,5 +62,5 @@ export const PATCH = handler(async (req: Request, ctx: Ctx) => {
   }
   if (body.body === undefined) throw new HttpError(400, 'Nothing to update.');
   const draft = await editDraft(id, body.body);
-  return ok({ draft, constraintViolations: checkHardConstraints(draft.body) });
+  return ok({ draft, constraintViolations: checkHardConstraints(draft.body, { kind: draft.kind ?? 'post' }) });
 });

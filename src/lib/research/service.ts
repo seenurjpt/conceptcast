@@ -15,6 +15,7 @@ import { currentUserId } from '../currentUser';
 import { availableProviders } from '../llm/client';
 import { users } from '../db/collections';
 import { researchConcept, type Log } from '../pipeline/research';
+import { isMine } from '../topics/helpers';
 import {
   DEFAULT_POOL_SIZE,
   MAX_POOL_SIZE,
@@ -174,9 +175,10 @@ export async function poolStatus(now = Date.now()): Promise<PoolStatus> {
 
   const topics = await Topic.find(
     { archived: false, $or: [{ ownerUserId: null }, { ownerUserId: userId }] },
-    { _id: 1, ownerUserId: 1 },
-  ).lean<{ _id: Types.ObjectId; ownerUserId: string | null }[]>();
-  const ownTopicIds = new Set(topics.filter((t) => t.ownerUserId === userId).map((t) => String(t._id)));
+    { _id: 1, ownerUserId: 1, startedBy: 1 },
+  ).lean<{ _id: Types.ObjectId; ownerUserId: string | null; startedBy?: string[] }[]>();
+  // Topics you created or started rank first in the pool.
+  const ownTopicIds = new Set(topics.filter((t) => isMine(t, userId)).map((t) => String(t._id)));
   const [rows, published, running] = await Promise.all([
     Concept.find(
       { status: 'backlog', $or: [{ topicId: { $in: topics.map((t) => t._id) } }, { topicId: null }] },

@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { getJson, sendJson } from '@/lib/ui';
 import { SubtopicRow, type Subtopic } from '@/components/SubtopicRow';
 import { researchBadge } from '@/lib/research/pool';
+import { AnnounceForm } from '@/components/AnnounceForm';
 import { ActionButton, Card, EmptyState, Notice, PageHeader, Segmented, Stat } from '@/components/ui';
 
 interface Topic {
@@ -15,6 +16,13 @@ interface Topic {
   description: string;
   origin: 'migrated' | 'user';
 }
+interface Announcement {
+  draftId: string;
+  status: 'pending' | 'approved' | 'rejected' | 'published';
+}
+
+/** Per-browser memory of "Not now" on the announcement offer, per topic. */
+const offerKey = (topicId: string) => `cc_announce_offer_dismissed_${topicId}`;
 type StatusFilter = 'backlog' | 'selected' | 'published' | 'retired' | 'all';
 
 export default function TopicPage() {
@@ -29,12 +37,28 @@ export default function TopicPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  /** Created by you, or a shared topic you started. */
+  const [mine, setMine] = useState(false);
+  const [showAnnounce, setShowAnnounce] = useState(false);
+  const [offerDismissed, setOfferDismissed] = useState(true);
+  useEffect(() => {
+    try {
+      setOfferDismissed(localStorage.getItem(offerKey(topicId)) === '1');
+    } catch {
+      setOfferDismissed(false);
+    }
+  }, [topicId]);
 
   const load = useCallback(async () => {
     try {
-      const r = await getJson<{ topic: Topic; subtopics: Subtopic[] }>(`/api/topics/${topicId}`);
+      const r = await getJson<{ topic: Topic; subtopics: Subtopic[]; announcement: Announcement | null; mine: boolean }>(
+        `/api/topics/${topicId}`,
+      );
       setTopic(r.topic);
       setSubtopics(r.subtopics);
+      setAnnouncement(r.announcement);
+      setMine(r.mine);
     } catch (e) {
       const msg = (e as Error).message;
       if (/not found/i.test(msg)) setMissing(true);
@@ -128,6 +152,26 @@ export default function TopicPage() {
             >
               Suggest subtopics
             </ActionButton>
+            {mine && (
+              <button className="btn" onClick={() => setShowAnnounce((v) => !v)}>
+                {showAnnounce ? 'Close' : announcement?.status === 'published' ? 'Announce again' : 'Announce'}
+              </button>
+            )}
+            {topic && !mine && topic.origin === 'migrated' && (
+              <ActionButton
+                className="btn"
+                pendingLabel="Starting…"
+                title="Add this shared topic to your topics"
+                onClick={() =>
+                  run(async () => {
+                    await sendJson(`/api/topics/${topicId}/start`, 'POST');
+                    return `"${topic.title}" is now one of your topics.`;
+                  })
+                }
+              >
+                Start this topic
+              </ActionButton>
+            )}
             <button className="btn btn-primary" onClick={() => setShowAdd((v) => !v)} disabled={!topic}>
               {showAdd ? 'Close' : 'Add subtopic'}
             </button>
@@ -139,6 +183,58 @@ export default function TopicPage() {
         {error && <Notice kind="error" onDismiss={() => setError(null)}>{error}</Notice>}
         {notice && <Notice kind="ok" onDismiss={() => setNotice(null)}>{notice}</Notice>}
       </div>
+
+      {/* Offered once per topic you created: until you announce it or say not now. */}
+      {mine && topic && !announcement && !offerDismissed && !showAnnounce && (
+        <Card className="mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="t-title-sm">Starting {topic.title}? Tell your network.</p>
+              <p className="t-body-sm mt-0.5 text-body">
+                A short post saying you are learning it in public gives the posts that follow a story to belong to.
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button className="btn btn-primary btn-sm" onClick={() => setShowAnnounce(true)}>
+                Write the announcement
+              </button>
+              <button
+                className="btn btn-quiet btn-sm"
+                onClick={() => {
+                  setOfferDismissed(true);
+                  try {
+                    localStorage.setItem(offerKey(topicId), '1');
+                  } catch {
+                    /* private mode: it just comes back next visit */
+                  }
+                }}
+              >
+                Not now
+              </button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {announcement && announcement.status !== 'rejected' && !showAnnounce && (
+        <p className="t-caption mt-3 text-muted">
+          Announcement {announcement.status === 'published' ? 'posted' : announcement.status === 'approved' ? 'scheduled' : 'waiting in Drafts'}.{' '}
+          <Link className="text-primary hover:underline" href={`/review?draft=${announcement.draftId}`}>
+            Open it
+          </Link>
+        </p>
+      )}
+
+      {showAnnounce && topic && (
+        <div className="mt-4">
+          <AnnounceForm
+            topicId={topicId}
+            topicTitle={topic.title}
+            replacesPending={announcement?.status === 'pending'}
+            onCancel={() => setShowAnnounce(false)}
+          />
+        </div>
+      )}
 
       {showAdd && (
         <div className="mt-4">
@@ -217,6 +313,28 @@ export default function TopicPage() {
             }}
           >
             Archive this topic
+          </ActionButton>
+        </div>
+      )}
+
+      {/* A shared topic you started: leaving it only takes it off your list. */}
+      {topic?.origin === 'migrated' && mine && (
+        <div className="mt-8 border-t border-hairline pt-4">
+          <ActionButton
+            className="btn btn-quiet btn-sm"
+            confirm={{
+              title: `Remove "${topic.title}" from your topics?`,
+              body: 'It goes back to the shared topics. Its subtopics, drafts and published posts are all kept.',
+              confirmLabel: 'Remove',
+            }}
+            onClick={() =>
+              run(async () => {
+                await sendJson(`/api/topics/${topicId}/start`, 'DELETE');
+                return `"${topic.title}" is back in the shared topics.`;
+              })
+            }
+          >
+            Remove from your topics
           </ActionButton>
         </div>
       )}

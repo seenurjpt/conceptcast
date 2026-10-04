@@ -22,7 +22,7 @@ export const GET = handler(async (req: Request) => {
   }
   const filter = status === 'all' ? {} : { status: status as DraftStatus };
   const drafts = await Draft.find(filter).sort({ createdAt: -1 }).limit(200).lean<DraftDoc[]>();
-  const conceptIds = [...new Set(drafts.map((d) => String(d.conceptId)))];
+  const conceptIds = [...new Set(drafts.map((d) => d.conceptId).filter(Boolean).map(String))];
   const [concepts, publications] = await Promise.all([
     Concept.find({ _id: { $in: conceptIds } }).lean<ConceptDoc[]>(),
     Publication.find({ draftId: { $in: drafts.map((d) => d._id) } }).lean<PublicationDoc[]>(),
@@ -30,18 +30,23 @@ export const GET = handler(async (req: Request) => {
   const conceptById = new Map(concepts.map((c) => [String(c._id), c]));
   const pubByDraft = new Map(publications.map((p) => [String(p.draftId), p]));
   // The main topic each draft belongs to, for the "Topic › Subtopic" line.
-  const topicIds = [...new Set(concepts.map((c) => c.topicId).filter(Boolean).map(String))];
+  // Announcements carry their topic directly.
+  const topicIds = [
+    ...new Set([...concepts.map((c) => c.topicId), ...drafts.map((d) => d.topicId)].filter(Boolean).map(String)),
+  ];
   const topics = topicIds.length
     ? await Topic.find({ _id: { $in: topicIds } }, { title: 1 }).lean<Pick<TopicDoc, '_id' | 'title'>[]>()
     : [];
   const topicById = new Map(topics.map((t) => [String(t._id), { _id: String(t._id), title: t.title }]));
   return ok({
     drafts: drafts.map((d) => {
-      const concept = conceptById.get(String(d.conceptId)) ?? null;
+      const concept = d.conceptId ? (conceptById.get(String(d.conceptId)) ?? null) : null;
+      const topicId = d.topicId ?? concept?.topicId ?? null;
       return {
         ...d,
+        kind: d.kind ?? 'post',
         concept,
-        topic: concept?.topicId ? (topicById.get(String(concept.topicId)) ?? null) : null,
+        topic: topicId ? (topicById.get(String(topicId)) ?? null) : null,
         publication: pubByDraft.get(String(d._id)) ?? null,
       };
     }),

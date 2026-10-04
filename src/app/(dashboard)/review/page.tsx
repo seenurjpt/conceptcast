@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { getJson, sendJson, fmtRelative, fmtDate, toLocalInput, LINKEDIN_FOLD } from '@/lib/ui';
-import { checkHardConstraints, MIN_CHARS, MAX_CHARS } from '@/lib/pipeline/constraints';
+import { checkHardConstraints, lengthLimits } from '@/lib/pipeline/constraints';
 import { useSession } from '@/components/SessionProvider';
 import { useDialog } from '@/components/Modal';
 import {
@@ -52,6 +52,8 @@ interface ConceptLite {
 }
 interface DraftRow {
   _id: string;
+  /** Older rows arrive without it; treated as 'post'. */
+  kind?: 'post' | 'announcement';
   angle: string;
   hook: string;
   body: string;
@@ -61,7 +63,10 @@ interface DraftRow {
   editedByHuman: boolean;
   rejectionReason: string | null;
   createdAt: string;
-  critique: { score: number; issues: string[]; strengths: string[]; depthPassed: boolean; revisionOf: string | null };
+  /** Null for announcements: they get the machine checks but no critic. */
+  critique: { score: number; issues: string[]; strengths: string[]; depthPassed: boolean; revisionOf: string | null } | null;
+  /** What the author typed for an announcement; reused by "Write it again". */
+  announce?: { why: string | null; cadence: string | null } | null;
   concept: ConceptLite | null;
   topic?: { _id: string; title: string } | null;
   publication: { _id: string; status: string; scheduledFor: string; postUrn: string | null; error: string | null } | null;
@@ -81,7 +86,16 @@ interface DraftDetail {
   research: Research | null;
   previous: DraftRow | null;
   publication: DraftRow['publication'];
+  /** The main topic, sent for announcements (posts reach it through the concept). */
+  topic?: { _id: string; title: string; description?: string } | null;
   constraintViolations: string[];
+}
+
+const isAnnouncement = (d: Pick<DraftRow, 'kind'>) => d.kind === 'announcement';
+/** What to call a draft in the list and the panel header. */
+function draftTitle(d: DraftRow, topicTitle?: string | null): string {
+  if (isAnnouncement(d)) return `Starting ${topicTitle ?? d.topic?.title ?? 'a new topic'}`;
+  return d.concept?.title ?? 'Unknown';
 }
 
 export default function ReviewPage() {
@@ -215,12 +229,18 @@ export default function ReviewPage() {
                   className={`card card-hover h-full w-full p-4 text-left ${selectedId === d._id ? 'card-selected' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span className="t-title-sm min-w-0 flex-1 truncate">{d.concept?.title ?? 'Unknown'}</span>
-                    <ScoreBadge score={d.critique.score} passed={d.critique.depthPassed} />
+                    <span className="t-title-sm min-w-0 flex-1 truncate">{draftTitle(d)}</span>
+                    {d.critique && <ScoreBadge score={d.critique.score} passed={d.critique.depthPassed} />}
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <TrackBadge track={d.concept?.track} />
-                    <span className="badge badge-quiet">{d.angle}</span>
+                    {isAnnouncement(d) ? (
+                      <TrackBadge track="announcement" />
+                    ) : (
+                      <>
+                        <TrackBadge track={d.concept?.track} />
+                        <span className="badge badge-quiet">{d.angle}</span>
+                      </>
+                    )}
                     {d.editedByHuman && <span className="badge badge-quiet">edited</span>}
                   </div>
                   <div className="t-caption mt-2 truncate text-muted">
@@ -240,7 +260,9 @@ export default function ReviewPage() {
 }
 
 function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Promise<string | void>) => Promise<void> }) {
-  const { draft, concept, research, previous, publication } = detail;
+  const { draft, concept, research, previous, publication, topic } = detail;
+  const announcement = isAnnouncement(draft);
+  const limits = lengthLimits(announcement ? 'announcement' : 'post');
   const { session } = useSession();
   const dialog = useDialog();
   const [editing, setEditing] = useState(false);
@@ -254,7 +276,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
   const watermarkOverflow = watermark && watermarkWouldOverflow(body);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const violations = useMemo(() => checkHardConstraints(body), [body]);
+  const violations = useMemo(() => checkHardConstraints(body, { kind: announcement ? 'announcement' : 'post' }), [body, announcement]);
   const dirty = body !== draft.body;
   const canDecide = draft.status === 'pending' || draft.status === 'approved';
   const canPublish = session?.signedIn ?? false;
@@ -301,14 +323,22 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="t-title">{concept?.title ?? 'Unknown concept'}</h2>
-            <p className="t-body-sm mt-0.5 text-body">{concept?.oneLiner}</p>
+            <h2 className="t-title">{announcement ? draftTitle(draft, topic?.title) : (concept?.title ?? 'Unknown concept')}</h2>
+            <p className="t-body-sm mt-0.5 text-body">
+              {announcement ? 'Telling your network you are learning this in public. No research or critic score; the machine checks still run.' : concept?.oneLiner}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <TrackBadge track={concept?.track} />
-            <span className="badge badge-quiet">{draft.angle}</span>
+            {announcement ? (
+              <TrackBadge track="announcement" />
+            ) : (
+              <>
+                <TrackBadge track={concept?.track} />
+                <span className="badge badge-quiet">{draft.angle}</span>
+              </>
+            )}
             <span className="badge badge-quiet">v{draft.version}</span>
-            <ScoreBadge score={draft.critique.score} passed={draft.critique.depthPassed} />
+            {draft.critique && <ScoreBadge score={draft.critique.score} passed={draft.critique.depthPassed} />}
           </div>
         </div>
 
@@ -337,15 +367,19 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
               <Segmented
                 value={pane}
                 onChange={setPane}
-                options={[
-                  { value: 'draft', label: 'Draft' },
-                  { value: 'research', label: 'Research', count: research?.facts.length },
-                  { value: 'critique', label: 'Critique', count: draft.critique.issues.length },
-                ]}
+                options={
+                  announcement
+                    ? [{ value: 'draft', label: 'Draft' }]
+                    : [
+                        { value: 'draft', label: 'Draft' },
+                        { value: 'research', label: 'Research', count: research?.facts.length },
+                        { value: 'critique', label: 'Critique', count: draft.critique?.issues.length ?? 0 },
+                      ]
+                }
               />
               {pane === 'draft' && (
                 <div className="flex items-center gap-3">
-                  <CharMeter count={body.length} min={MIN_CHARS} max={MAX_CHARS} />
+                  <CharMeter count={body.length} min={limits.min} max={limits.max} />
                   {canDecide && !editing && (
                     <button className="btn btn-quiet btn-sm" onClick={() => setEditing(true)}>
                       Edit
@@ -469,7 +503,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                 <p className="p-5 text-[14px] text-muted">No research stored for this draft.</p>
               ))}
 
-            {pane === 'critique' && (
+            {pane === 'critique' && draft.critique && (
               <div className="space-y-4 p-5 text-[14px]">
                 {draft.critique.issues.length > 0 && (
                   <section>
@@ -501,7 +535,8 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                 {previous && (
                   <details className="border-t border-hairline pt-3">
                     <summary className="cursor-pointer text-[13px] text-primary">
-                      Show the failed v{previous.version}, scored {previous.critique.score}
+                      Show the failed v{previous.version}
+                      {previous.critique ? `, scored ${previous.critique.score}` : ''}
                     </summary>
                     <div className="post-text mt-3 rounded-[12px] border border-hairline bg-surface-soft p-3 text-[14px]">
                       {previous.body}
@@ -521,6 +556,8 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
         </div>
 
         <div className="space-y-4">
+          {/* An announcement cites nothing, so there is no Sources card for it. */}
+          {!announcement && (
           <Card title="Sources">
             {sources.length === 0 ? (
               <p className="text-[13px] text-muted">No sources recorded.</p>
@@ -555,6 +592,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
               </ul>
             )}
           </Card>
+          )}
 
           {canDecide && (
             <Card title="Decision">
@@ -641,6 +679,30 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                   Reject
                 </ActionButton>
 
+                {announcement ? (
+                  <div className="border-t border-hairline pt-3">
+                    <ActionButton
+                      className="btn btn-quiet w-full"
+                      pendingLabel="Writing…"
+                      disabled={!topic}
+                      onClick={() =>
+                        run(async () => {
+                          await sendJson(`/api/topics/${topic?._id}/announce`, 'POST', {
+                            why: draft.announce?.why ?? undefined,
+                            cadence: draft.announce?.cadence ?? undefined,
+                          });
+                          return 'Rewritten. The new version is at the top of the pending list.';
+                        })
+                      }
+                    >
+                      Write it again
+                    </ActionButton>
+                    <p className="t-caption mt-1.5 text-muted">
+                      A fresh take in a few seconds, keeping the reason and posting rhythm you gave. To change those, use
+                      Announce on the topic page.
+                    </p>
+                  </div>
+                ) : (
                 <div className="border-t border-hairline pt-3">
                   <label className="label" htmlFor="angle">
                     Rewrite with a different angle
@@ -674,6 +736,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                   </div>
                   <p className="t-caption mt-1.5 text-muted">Reuses the existing research. Takes a minute or two.</p>
                 </div>
+                )}
               </div>
             </Card>
           )}

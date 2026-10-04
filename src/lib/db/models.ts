@@ -207,27 +207,46 @@ const ResearchSchema = new Schema<ResearchDoc>({
 
 /* ── drafts ───────────────────────────────────────────────────────────────── */
 
-export const DRAFT_ANGLES = ['mechanism', 'misconception', 'tradeoff', 'debug-story'] as const;
+/** 'announcement' is only ever the angle of an announcement draft; the writer's angles are the first four. */
+export const DRAFT_ANGLES = ['mechanism', 'misconception', 'tradeoff', 'debug-story', 'announcement'] as const;
 export type DraftAngle = (typeof DRAFT_ANGLES)[number];
 export const DRAFT_STATUSES = ['pending', 'approved', 'rejected', 'published'] as const;
 export type DraftStatus = (typeof DRAFT_STATUSES)[number];
+/**
+ * 'post' = a researched explainer about one subtopic.
+ * 'announcement' = a short "I'm starting to learn <topic>" post: no subtopic,
+ * no research, no critic score, so those fields are null for it.
+ */
+export const DRAFT_KINDS = ['post', 'announcement'] as const;
+export type DraftKind = (typeof DRAFT_KINDS)[number];
+
+export interface DraftCritique {
+  score: number;
+  issues: string[];
+  strengths: string[];
+  depthPassed: boolean;
+  revisionOf: Types.ObjectId | null;
+}
 
 export interface DraftDoc {
   _id: Types.ObjectId;
-  conceptId: Types.ObjectId;
-  researchId: Types.ObjectId;
+  /** Older rows have no kind; treat a missing one as 'post'. */
+  kind: DraftKind;
+  /** Null only for announcements. */
+  conceptId: Types.ObjectId | null;
+  /** Null only for announcements. */
+  researchId: Types.ObjectId | null;
+  /** The main topic an announcement is about; null for posts (they reach it through the concept). */
+  topicId: Types.ObjectId | null;
   angle: DraftAngle;
   hook: string;
   body: string;
   charCount: number;
   hashtags: string[];
-  critique: {
-    score: number;
-    issues: string[];
-    strengths: string[];
-    depthPassed: boolean;
-    revisionOf: Types.ObjectId | null;
-  };
+  /** Null only for announcements, which get the machine checks but no critic. */
+  critique: DraftCritique | null;
+  /** What the author typed for an announcement, so "Write it again" keeps it. */
+  announce: { why: string | null; cadence: string | null } | null;
   version: number;
   status: DraftStatus;
   editedByHuman: boolean;
@@ -237,8 +256,10 @@ export interface DraftDoc {
 }
 
 const DraftSchema = new Schema<DraftDoc>({
-  conceptId: { type: Schema.Types.ObjectId, ref: 'Concept', required: true, index: true },
-  researchId: { type: Schema.Types.ObjectId, ref: 'Research', required: true },
+  kind: { type: String, required: true, enum: DRAFT_KINDS, default: 'post' },
+  conceptId: { type: Schema.Types.ObjectId, ref: 'Concept', default: null, index: true },
+  researchId: { type: Schema.Types.ObjectId, ref: 'Research', default: null },
+  topicId: { type: Schema.Types.ObjectId, ref: 'Topic', default: null, index: true },
   angle: { type: String, required: true, enum: DRAFT_ANGLES },
   hook: { type: String, required: true },
   body: { type: String, required: true },
@@ -255,7 +276,14 @@ const DraftSchema = new Schema<DraftDoc>({
       },
       { _id: false },
     ),
-    required: true,
+    default: null,
+  },
+  announce: {
+    type: new Schema(
+      { why: { type: String, default: null }, cadence: { type: String, default: null } },
+      { _id: false },
+    ),
+    default: null,
   },
   version: { type: Number, required: true, default: 1 },
   status: { type: String, required: true, enum: DRAFT_STATUSES, default: 'pending', index: true },
@@ -282,7 +310,8 @@ export interface PublicationMetrics {
 export interface PublicationDoc {
   _id: Types.ObjectId;
   draftId: Types.ObjectId;
-  conceptId: Types.ObjectId;
+  /** Null for an announcement, which has no subtopic. */
+  conceptId: Types.ObjectId | null;
   scheduledFor: Date;
   publishedAt: Date | null;
   postUrn: string | null;
@@ -299,7 +328,7 @@ export interface PublicationDoc {
 
 const PublicationSchema = new Schema<PublicationDoc>({
   draftId: { type: Schema.Types.ObjectId, ref: 'Draft', required: true, unique: true },
-  conceptId: { type: Schema.Types.ObjectId, ref: 'Concept', required: true },
+  conceptId: { type: Schema.Types.ObjectId, ref: 'Concept', default: null },
   scheduledFor: { type: Date, required: true, index: true },
   publishedAt: { type: Date, default: null },
   postUrn: { type: String, default: null },
@@ -504,6 +533,12 @@ export interface TopicDoc {
   description: string;
   origin: TopicOrigin;
   archived: boolean;
+  /**
+   * Users who started this shared topic ("Start this topic"), which makes it
+   * one of their topics without copying it or its subtopics. Always empty for
+   * a user's own topic, which is theirs by ownership.
+   */
+  startedBy: string[];
   createdAt: Date;
 }
 
@@ -514,6 +549,7 @@ const TopicSchema = new Schema<TopicDoc>({
   description: { type: String, default: '' },
   origin: { type: String, required: true, enum: TOPIC_ORIGINS, default: 'user' },
   archived: { type: Boolean, required: true, default: false },
+  startedBy: { type: [String], required: true, default: [] },
   createdAt: { type: Date, required: true, default: () => new Date() },
 });
 

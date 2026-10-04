@@ -10,7 +10,7 @@ import { callJson, MODELS } from '../anthropic';
 import { setUsageConcept } from '../db/usageSink';
 import { loadPrompt } from '../loadPrompt';
 import { SuggestSubtopicsSchema, type SuggestSubtopicsOutput } from '../schemas';
-import { slugify, uniqueSlug, trackTopic, dedupeSuggestions } from './helpers';
+import { slugify, uniqueSlug, trackTopic, dedupeSuggestions, isMine } from './helpers';
 
 export interface TopicCounts {
   backlog: number;
@@ -19,7 +19,8 @@ export interface TopicCounts {
   retired: number;
   total: number;
 }
-export type TopicSummary = TopicDoc & { counts: TopicCounts };
+/** `mine`: created by this user, or a shared topic they started. */
+export type TopicSummary = TopicDoc & { counts: TopicCounts; mine: boolean };
 
 const emptyCounts = (): TopicCounts => ({ backlog: 0, selected: 0, published: 0, retired: 0, total: 0 });
 
@@ -73,7 +74,28 @@ export async function listTopics(userId: string): Promise<TopicSummary[]> {
     c.total += r.n;
     counts.set(key, c);
   }
-  return topics.map((t) => ({ ...t, counts: counts.get(String(t._id)) ?? emptyCounts() }));
+  // Yours (created or started) first; the query's order holds within each group.
+  return topics
+    .map((t) => ({ ...t, counts: counts.get(String(t._id)) ?? emptyCounts(), mine: isMine(t, userId) }))
+    .sort((a, b) => Number(b.mine) - Number(a.mine));
+}
+
+/**
+ * Start a shared topic: it becomes one of yours without copying anything, so
+ * its subtopics, research and drafts stay single. Your own topics are already
+ * yours, so this only applies to shared ones. Returns null if not found.
+ */
+export async function startTopic(userId: string, id: Types.ObjectId | string): Promise<TopicDoc | null> {
+  return Topic.findOneAndUpdate(
+    { _id: id, archived: false, ownerUserId: null },
+    { $addToSet: { startedBy: userId } },
+    { returnDocument: 'after' },
+  ).lean<TopicDoc>();
+}
+
+/** Stop a shared topic you started. Drafts and published posts are kept. */
+export async function stopTopic(userId: string, id: Types.ObjectId | string): Promise<TopicDoc | null> {
+  return Topic.findOneAndUpdate({ _id: id, ownerUserId: null }, { $pull: { startedBy: userId } }, { returnDocument: 'after' }).lean<TopicDoc>();
 }
 
 export async function getTopic(userId: string, id: Types.ObjectId | string): Promise<TopicDoc | null> {

@@ -101,7 +101,7 @@ export async function trackStats(): Promise<TrackStats[]> {
       a.re.push(p.metrics.reactions);
       a.co.push(p.metrics.comments);
     }
-    if (d) a.cr.push(d.critique.score);
+    if (d?.critique) a.cr.push(d.critique.score);
     acc.set(c.track, a);
   }
   const avg = (xs: number[]): number | null => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);

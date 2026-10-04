@@ -45,12 +45,13 @@ export async function approveDraft(
     { draftId: draft._id },
     {
       $set: { scheduledFor: when, status: 'scheduled', error: null, watermark: opts.watermark ?? false },
-      $setOnInsert: { conceptId: draft.conceptId, attempts: 0, createdAt: new Date() },
+      $setOnInsert: { conceptId: draft.conceptId ?? null, attempts: 0, createdAt: new Date() },
     },
     { upsert: true, new: true },
   ).lean<PublicationDoc>();
   if (!publication) throw new Error('Failed to create publication row.');
-  await Concept.updateOne({ _id: draft.conceptId }, { $set: { status: 'selected' } });
+  // An announcement has no subtopic to move along.
+  if (draft.conceptId) await Concept.updateOne({ _id: draft.conceptId }, { $set: { status: 'selected' } });
   return { draft, publication };
 }
 
@@ -63,7 +64,7 @@ export async function rejectDraft(draftId: Types.ObjectId | string, reason?: str
   ).lean<DraftDoc>();
   if (!draft) throw new Error('Draft not found or not rejectable.');
   await Publication.deleteOne({ draftId: draft._id, status: { $in: ['scheduled', 'failed'] } });
-  await Concept.updateOne(
+  if (draft.conceptId) await Concept.updateOne(
     { _id: draft.conceptId, status: { $ne: 'published' } },
     { $set: { status: 'backlog', coveredAt: null, note: `Rejected in review: ${reason?.trim() || 'no reason given'}` } },
   );
@@ -80,7 +81,8 @@ export async function editDraft(
     .filter((l) => l.trim().length > 0)
     .slice(0, 2)
     .join('\n');
-  const hashtags = [...body.matchAll(/#[A-Za-z0-9_]+/g)].map((m) => m[0]).slice(0, 3);
+  // Posts allow 3 hashtags and announcements 5; the checks enforce which.
+  const hashtags = [...body.matchAll(/#[A-Za-z0-9_]+/g)].map((m) => m[0]).slice(0, 5);
   const draft = await Draft.findOneAndUpdate(
     { _id: draftId, status: { $in: ['pending', 'approved'] } },
     { $set: { body, hook, hashtags, charCount: body.length, editedByHuman: true } },
@@ -133,7 +135,7 @@ export async function publishPublication(publicationId: Types.ObjectId | string)
       { $set: { status: 'published', postUrn, publishedAt, error: null } },
     );
     await Draft.updateOne({ _id: draft._id }, { $set: { status: 'published' } });
-    await Concept.updateOne(
+    if (draft.conceptId) await Concept.updateOne(
       { _id: draft.conceptId },
       { $set: { status: 'published', publishedDraftId: draft._id, coveredAt: publishedAt, timelinessBoost: 0 } },
     );

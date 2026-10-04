@@ -94,3 +94,11 @@ export function dedupeSuggestions<T extends { title: string }>(existingTitles: s
   }
   return out;
 }
+
+/**
+ * A topic is "mine" if I created it, or if I started a shared one. Mine gets
+ * the announcement post and first place in the background research pool.
+ */
+export function isMine(topic: { ownerUserId: string | null; startedBy?: string[] | null }, userId: string): boolean {
+  return topic.ownerUserId === userId || (topic.ownerUserId === null && Boolean(topic.startedBy?.includes(userId)));
+}

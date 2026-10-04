@@ -18,14 +18,44 @@ const EMOJI =
 export const MIN_CHARS = 1_000;
 export const MAX_CHARS = 1_700;
 
-export function checkHardConstraints(body: string): string[] {
+/** "I'm starting to learn X" posts: short, a few more hashtags allowed. */
+export const ANNOUNCEMENT_MIN_CHARS = 300;
+export const ANNOUNCEMENT_MAX_CHARS = 900;
+export const ANNOUNCEMENT_MAX_HASHTAGS = 5;
+
+/**
+ * The openers that make a "starting a journey" post read like every other
+ * one in the feed. Checked in the first two lines of an announcement.
+ */
+export const ANNOUNCEMENT_BANNED_OPENERS = [
+  'excited to',
+  'thrilled to',
+  'happy to announce',
+  'pleased to announce',
+  'proud to announce',
+  'day 1 of',
+  'embarking on',
+  'kicking off my journey',
+  'new journey',
+];
+
+export type ConstraintKind = 'post' | 'announcement';
+
+export function lengthLimits(kind: ConstraintKind = 'post'): { min: number; max: number } {
+  return kind === 'announcement' ? { min: ANNOUNCEMENT_MIN_CHARS, max: ANNOUNCEMENT_MAX_CHARS } : { min: MIN_CHARS, max: MAX_CHARS };
+}
+
+export function checkHardConstraints(body: string, opts: { kind?: ConstraintKind } = {}): string[] {
+  const kind = opts.kind ?? 'post';
+  const { min, max } = lengthLimits(kind);
+  const maxHashtags = kind === 'announcement' ? ANNOUNCEMENT_MAX_HASHTAGS : 3;
   const violations: string[] = [];
   const len = body.length;
   const lines = body.split('\n');
   const nonEmpty = lines.filter((l) => l.trim().length > 0);
 
-  if (len < MIN_CHARS || len > MAX_CHARS) {
-    violations.push(`length: ${len} chars (must be ${MIN_CHARS}-${MAX_CHARS})`);
+  if (len < min || len > max) {
+    violations.push(`length: ${len} chars (must be ${min}-${max})`);
   }
 
   const hook = nonEmpty.slice(0, 2).join(' ');
@@ -33,7 +63,8 @@ export function checkHardConstraints(body: string): string[] {
     violations.push('hook: must not be a question');
   }
   const hookLower = hook.toLowerCase();
-  for (const opener of HOOK_BANNED_OPENERS) {
+  const openers = kind === 'announcement' ? [...HOOK_BANNED_OPENERS, ...ANNOUNCEMENT_BANNED_OPENERS] : HOOK_BANNED_OPENERS;
+  for (const opener of openers) {
     if (hookLower.includes(opener)) violations.push(`hook: contains banned opener "${opener}"`);
   }
 
@@ -45,7 +76,7 @@ export function checkHardConstraints(body: string): string[] {
   if (/\u2014/.test(body)) violations.push('punctuation: contains an em dash');
 
   const hashtags = body.match(/(^|\s)#[A-Za-z][A-Za-z0-9_]*/g) ?? [];
-  if (hashtags.length > 3) violations.push(`hashtags: ${hashtags.length} found (max 3)`);
+  if (hashtags.length > maxHashtags) violations.push(`hashtags: ${hashtags.length} found (max ${maxHashtags})`);
   if (hashtags.length > 0) {
     const lastRealLine = nonEmpty[nonEmpty.length - 1] ?? '';
     const tagsInLastLine = lastRealLine.match(/(^|\s)#[A-Za-z][A-Za-z0-9_]*/g) ?? [];
@@ -55,6 +86,13 @@ export function checkHardConstraints(body: string): string[] {
   }
 
   if (/(^|[\s(])@[A-Za-z]/m.test(body)) violations.push('mentions: contains an @mention');
+
+  // An announcement closes on a real question to the reader: the last line
+  // before the hashtags must end with a question mark.
+  if (kind === 'announcement') {
+    const lastText = [...nonEmpty].reverse().find((l) => !/^\s*(#[A-Za-z][A-Za-z0-9_]*\s*)+$/.test(l)) ?? '';
+    if (!/\?\s*$/.test(lastText)) violations.push('ending: the last line before the hashtags must be a question ending in "?"');
+  }
 
   const lower = body.toLowerCase();
   for (const phrase of BANNED_PHRASES) {

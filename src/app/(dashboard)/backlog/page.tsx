@@ -13,6 +13,8 @@ interface TopicSummary {
   description: string;
   origin: 'migrated' | 'user';
   counts: { backlog: number; selected: number; published: number; retired: number; total: number };
+  /** Created by you, or a shared topic you started. */
+  mine: boolean;
 }
 interface Proposal {
   _id: string;
@@ -96,8 +98,8 @@ export default function TopicsPage() {
     }
   };
 
-  const mine = topics.filter((t) => t.origin === 'user');
-  const shared = topics.filter((t) => t.origin !== 'user');
+  const mine = topics.filter((t) => t.mine);
+  const shared = topics.filter((t) => !t.mine);
 
   return (
     <>
@@ -305,7 +307,7 @@ function TopicGrid({ heading, topics, className = '' }: { heading: string; topic
               <Link href={`/backlog/${t._id}`} className="card card-hover flex h-full flex-col gap-2 no-underline">
                 <div className="flex items-start justify-between gap-2">
                   <span className="t-title-sm min-w-0">{t.title}</span>
-                  {t.origin === 'migrated' && <span className="badge badge-quiet shrink-0">shared</span>}
+                  {t.origin === 'migrated' && !t.mine && <span className="badge badge-quiet shrink-0">shared</span>}
                 </div>
                 {t.description && <p className="t-body-sm line-clamp-2 text-body">{t.description}</p>}
                 <p className="t-caption mt-auto pt-1 text-muted">

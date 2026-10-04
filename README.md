@@ -156,6 +156,12 @@ A **Topic** is a main subject you are learning (`topics` collection: title, slug
 
 The seven legacy tracks (`coding-agents`, `workflow`, `codegen-quality`, `tooling`, `team-practice`, `economics`, `risk`) become shared topics the first time `GET /api/topics` runs; the migration is idempotent and attaches existing concepts by track. The suggestion prompt lives in [src/lib/prompts/suggest-subtopics.md](src/lib/prompts/suggest-subtopics.md), the service in [src/lib/topics/service.ts](src/lib/topics/service.ts).
 
+## Announcing a topic
+
+On any topic you created, **Announce** (or the one-time "Starting X? Tell your network" card) writes a short "I'm learning this in public" post: 350 to 650 characters plus 3 to 5 hashtags, naming a few of your subtopics as what is coming and ending on a question. Two optional fields: why you are starting, and how often you will post. A rhythm is only mentioned if you give one, and nothing about your background is made up when you leave the reason blank.
+
+It is one short model call with no research and no critic, then the usual machine checks in announcement mode (its own length range, up to 5 hashtags, no "Excited to share" style openers, must end on a question) and the usual Drafts review, watermark and publishing. Drafts carry a `kind` (`post` or `announcement`); an announcement has a `topicId` and no concept, research or critique, and publishing it does not touch any subtopic. Prompt: [src/lib/prompts/announce.md](src/lib/prompts/announce.md); logic: [src/lib/announce.ts](src/lib/announce.ts).
+
 ## Background research pool
 
 Research is the slowest stage, so the app keeps the author's top subtopics researched ahead of time. Writing one of those skips straight to drafting.

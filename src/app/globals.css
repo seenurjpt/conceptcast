@@ -1493,3 +1493,148 @@ html {
 html.overlay-open {
   scrollbar-gutter: auto;
 }
+
+/* Announcement posts ("I'm starting to learn X") share the brand accent. */
+.track-announcement {
+  --track: var(--primary);
+}
+
+/* ── welcome loader (shown once, right after sign-in) ─────────────────────── */
+
+/*
+ * The logo builds itself: node, path, node, path, then the published post
+ * lands and broadcasts. Timeline in ms, ~1.9s total; app/welcome navigates
+ * away at 2.15s after fading out from 1.85s.
+ *   0     node 1      220  path 1      450  node 2      650  path 2
+ *   880   node 3      1150 rings       1050 wordmark    1250 caption
+ */
+.welcome {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 24px;
+  background: var(--canvas);
+  color: var(--ink);
+}
+.welcome-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: opacity 280ms ease, transform 280ms ease;
+}
+/* A soft halo behind the mark, in the brand blue. */
+.welcome-stage::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  width: 220px;
+  height: 220px;
+  margin-left: -110px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 16%, transparent) 0%, transparent 70%);
+  opacity: 0;
+  animation: welcome-fade 900ms ease-out 700ms both;
+  pointer-events: none;
+}
+.welcome-leaving .welcome-stage {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.welcome-mark {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  color: var(--primary);
+  overflow: visible;
+}
+.welcome-link {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: 0.55;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.welcome-link-1 { animation: welcome-draw 300ms ease-in-out 220ms both; }
+.welcome-link-2 { animation: welcome-draw 300ms ease-in-out 650ms both; }
+
+.welcome-node {
+  fill: currentColor;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.welcome-node-1 { --node-opacity: 0.6; animation: welcome-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) 0ms both; }
+.welcome-node-2 { --node-opacity: 0.8; animation: welcome-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) 450ms both; }
+/* The published post lands with a little more weight. */
+.welcome-node-3 { --node-opacity: 1; animation: welcome-land 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 880ms both; }
+
+.welcome-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.9;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.welcome-ring-1 { animation: welcome-ring 800ms ease-out 1150ms both; }
+.welcome-ring-2 { animation: welcome-ring 800ms ease-out 1400ms both; }
+
+.welcome-word {
+  margin-top: 20px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  animation: welcome-rise 420ms ease-out 1050ms both;
+}
+.welcome-caption {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  animation: welcome-rise 420ms ease-out 1250ms both;
+}
+
+@keyframes welcome-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes welcome-pop {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: var(--node-opacity); }
+}
+@keyframes welcome-land {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+/* Starts invisible: the animation holds its first frame during its delay, so a visible 0% would show the ring early. */
+@keyframes welcome-ring {
+  0% { transform: scale(1); opacity: 0; }
+  12% { transform: scale(1.15); opacity: 0.55; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+@keyframes welcome-rise {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes welcome-fade {
+  to { opacity: 1; }
+}
+
+/* Reduced motion: the finished mark, still, and no broadcast rings. */
+@media (prefers-reduced-motion: reduce) {
+  .welcome-link,
+  .welcome-node,
+  .welcome-word,
+  .welcome-caption,
+  .welcome-stage::before {
+    animation: none;
+  }
+  .welcome-link { stroke-dashoffset: 0; }
+  .welcome-node-1 { opacity: 0.6; }
+  .welcome-node-2 { opacity: 0.8; }
+  .welcome-stage::before { opacity: 1; }
+  .welcome-ring { display: none; }
+  .welcome-stage { transition: none; }
+}

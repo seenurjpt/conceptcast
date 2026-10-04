@@ -1,5 +1,5 @@
 import { handler, ok } from '@/lib/api';
-import { Publication, Draft, Concept, type PublicationDoc, type DraftDoc, type ConceptDoc } from '@/lib/db/models';
+import { Publication, Draft, Concept, Topic, type PublicationDoc, type DraftDoc, type ConceptDoc, type TopicDoc } from '@/lib/db/models';
 import { engagementScore, trackStats } from '@/lib/feedback';
 
 export const dynamic = 'force-dynamic';
@@ -19,21 +19,30 @@ export const GET = handler(async (req: Request) => {
   const publications = await Publication.find(filter).sort({ scheduledFor: -1 }).limit(500).lean<PublicationDoc[]>();
   const [drafts, concepts, stats] = await Promise.all([
     Draft.find({ _id: { $in: publications.map((p) => p.draftId) } }).lean<DraftDoc[]>(),
-    Concept.find({ _id: { $in: publications.map((p) => p.conceptId) } }).lean<ConceptDoc[]>(),
+    Concept.find({ _id: { $in: publications.map((p) => p.conceptId).filter(Boolean) } }).lean<ConceptDoc[]>(),
     trackStats(),
   ]);
   const draftById = new Map(drafts.map((d) => [String(d._id), d]));
   const conceptById = new Map(concepts.map((c) => [String(c._id), c]));
+  const topicIds = drafts.filter((d) => d.kind === 'announcement' && d.topicId).map((d) => d.topicId);
+  const topics = topicIds.length ? await Topic.find({ _id: { $in: topicIds } }, { title: 1 }).lean<Pick<TopicDoc, '_id' | 'title'>[]>() : [];
+  const topicTitle = new Map(topics.map((t) => [String(t._id), t.title]));
   return ok({
     publications: publications.map((p) => {
       const d = draftById.get(String(p.draftId));
-      const c = conceptById.get(String(p.conceptId));
+      const c = p.conceptId ? conceptById.get(String(p.conceptId)) : undefined;
+      // Announcements have no subtopic; present them with the same shape so the
+      // calendar and analytics rows need no special case.
+      const announcement =
+        d?.kind === 'announcement'
+          ? { slug: 'announcement', title: `Starting ${topicTitle.get(String(d.topicId)) ?? 'a new topic'}`, track: 'announcement' }
+          : null;
       return {
         ...p,
         hook: d?.hook ?? '',
         angle: d?.angle ?? null,
-        criticScore: d?.critique.score ?? null,
-        concept: c ? { slug: c.slug, title: c.title, track: c.track } : null,
+        criticScore: d?.critique?.score ?? null,
+        concept: c ? { slug: c.slug, title: c.title, track: c.track } : announcement,
         engagement: p.metrics ? engagementScore(p.metrics) : null,
       };
     }),

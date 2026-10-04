@@ -4,6 +4,8 @@ import { requireUserId } from '@/lib/session';
 import { getTopic, listSubtopics, updateTopic, archiveTopic } from '@/lib/topics/service';
 import { releaseStaleClaims } from '@/lib/pipeline/generate';
 import { kickResearchPool } from '@/lib/research/service';
+import { latestAnnouncement } from '@/lib/announce';
+import { isMine } from '@/lib/topics/helpers';
 
 export const dynamic = 'force-dynamic';
 /** Opening a topic tops up the research pool after the response. */
@@ -21,7 +23,8 @@ export const GET = handler(async (_req: Request, ctx: Ctx) => {
   // Put back anything an interrupted run left claimed, so it is writable again.
   await releaseStaleClaims();
   kickResearchPool('topic page opened');
-  return ok({ topic, subtopics: await listSubtopics(topic._id) });
+  const [subtopics, announcement] = await Promise.all([listSubtopics(topic._id), latestAnnouncement(topic._id)]);
+  return ok({ topic, subtopics, announcement, mine: isMine(topic, userId) });
 });
 
 const Patch = z.object({
