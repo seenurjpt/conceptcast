@@ -68,7 +68,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [reload]);
 
   const signInHref = useCallback((returnTo?: string) => {
-    const path = returnTo ?? (typeof window === 'undefined' ? '/backlog' : window.location.pathname);
+    const path = returnTo ?? (typeof window === 'undefined' ? '/dashboard' : window.location.pathname);
     return `/api/auth/linkedin?returnTo=${encodeURIComponent(path)}`;
   }, []);
 

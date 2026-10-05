@@ -12,6 +12,7 @@ import { lockPage } from '@/lib/pageLock';
 
 /** Ordered by the actual flow: pick a topic, review the draft, see what shipped. */
 const LINKS = [
+  { href: '/dashboard', label: 'Dashboard' },
   { href: '/backlog', label: 'Topics' },
   { href: '/review', label: 'Drafts' },
   { href: '/calendar', label: 'Published' },
@@ -36,9 +37,9 @@ export function Nav() {
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} path={path} />
 
     <header className="sticky top-0 z-30 border-b border-hairline bg-canvas/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-4 sm:px-5 md:gap-6">
+      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-4 sm:px-5 lg:gap-6">
         <button
-          className="-ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink md:hidden"
+          className="-ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink lg:hidden"
           onClick={() => setMenuOpen(true)}
           aria-label="Open menu"
           aria-expanded={menuOpen}
@@ -49,12 +50,12 @@ export function Nav() {
           </svg>
         </button>
 
-        <Link href="/backlog" className="flex shrink-0 items-center gap-2" aria-label="conceptcast home">
+        <Link href="/dashboard" className="flex shrink-0 items-center gap-2" aria-label="conceptcast home">
           <LogoMark className="h-6 w-6 text-primary" />
           <span className="t-title-sm tracking-[-0.02em]">conceptcast</span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center gap-1 md:flex">
+        <nav className="hidden min-w-0 flex-1 items-center gap-1 lg:flex">
           {LINKS.map((l) => {
             const active = path === l.href || path.startsWith(l.href + '/');
             return (
@@ -105,7 +106,7 @@ function MobileMenu({ open, onClose, path }: { open: boolean; onClose: () => voi
 
   return (
     // z-40 clears the sticky header's z-30 so the drawer covers it.
-    <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+    <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
       <div
         ref={panelRef}

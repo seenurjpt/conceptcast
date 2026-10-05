@@ -8,12 +8,12 @@ interface Status {
   member: { name: string | null } | null;
 }
 
-const SAFE_NEXT = /^\/(review|backlog|calendar|voice|analytics|settings|admin)(\/|\?|$)/;
+const SAFE_NEXT = /^\/(dashboard|review|backlog|calendar|voice|analytics|settings|admin)(\/|\?|$)/;
 
 export function LoginPanel() {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [next, setNext] = useState('/backlog');
+  const [next, setNext] = useState('/dashboard');
   const [going, setGoing] = useState(false);
 
   useEffect(() => {

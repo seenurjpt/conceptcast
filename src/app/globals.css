@@ -1399,6 +1399,233 @@ html {
   scrollbar-gutter: stable both-edges;
 }
 
+/* Drafts screen, phones and tablets: the approve action pinned to the bottom
+   of the screen, since the Publish card sits after the draft there. */
+.review-actionbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 30;
+  border-top: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--canvas) 92%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* The narrowest phones keep the hint and the approve button; the full card
+   is a scroll away. A plain rule, because .btn's display would beat a
+   hidden utility. */
+@media (max-width: 359px) {
+  .review-actionbar .bar-options {
+    display: none;
+  }
+}
+
+/* ── dashboard ───────────────────────────────────────────────────────────── */
+/* Classes rather than utilities wherever .card is involved: .card sets its
+   border outside Tailwind's layers, so a hover:border-* utility would lose. */
+
+/* Greeting band: the card surface with a soft wash of the primary blue from
+   the top right, the same light as the landing hero, much quieter. */
+.dash-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  background:
+    radial-gradient(640px circle at 100% 0%, rgba(0, 82, 255, 0.14), rgba(0, 82, 255, 0) 62%),
+    radial-gradient(420px circle at 0% 120%, rgba(77, 139, 255, 0.08), rgba(77, 139, 255, 0) 70%),
+    var(--surface-card);
+}
+@media (min-width: 640px) {
+  .dash-hero {
+    padding: 28px;
+  }
+}
+
+/* Soft icon tile used on stat tiles. */
+.dash-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: rgba(0, 82, 255, 0.1);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px rgba(0, 82, 255, 0.14);
+}
+
+.stat-tile,
+.setup-item {
+  transition:
+    border-color 150ms ease,
+    box-shadow 200ms ease,
+    transform 200ms ease;
+}
+.stat-tile:hover,
+.stat-tile:focus-visible {
+  border-color: rgba(77, 139, 255, 0.55);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px -22px rgba(0, 82, 255, 0.55);
+}
+.stat-tile.is-highlight {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+.stat-tile.is-highlight:hover {
+  box-shadow:
+    inset 0 0 0 1px var(--primary),
+    0 16px 36px -22px rgba(0, 82, 255, 0.55);
+}
+.setup-item:not(.is-done):hover,
+.setup-item:focus-visible {
+  border-color: var(--primary);
+}
+.setup-item.is-done {
+  opacity: 0.7;
+}
+
+/* List rows with a leading icon. */
+.dash-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  margin-inline: -8px;
+  border-radius: 12px;
+  transition: background-color 150ms ease;
+}
+a.dash-row:hover {
+  background: var(--surface-soft);
+}
+.dash-row-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--surface-strong);
+  color: var(--muted);
+}
+.dash-row-icon.is-linkedin {
+  background: rgba(10, 102, 194, 0.12);
+  color: #0a66c2;
+}
+:root[data-theme='dark'] .dash-row-icon.is-linkedin {
+  color: #5aa6f0;
+}
+.dash-topic {
+  display: block;
+  padding: 10px 8px;
+  margin-inline: -8px;
+  border-radius: 12px;
+  transition: background-color 150ms ease;
+}
+.dash-topic:hover {
+  background: var(--surface-soft);
+}
+
+/* Chart range switch: a small segmented control. */
+.range-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 100px;
+  background: var(--surface-strong);
+}
+.range-toggle button {
+  border-radius: 100px;
+  padding: 4px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.range-toggle button:hover {
+  color: var(--ink);
+}
+.range-toggle button[aria-pressed='true'] {
+  background: var(--surface-card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+.range-toggle button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+/* Change against the previous period. Colour plus an arrow and a word, never
+   colour alone. */
+.delta-pill {
+  align-self: center;
+  border-radius: 100px;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--surface-strong);
+  color: var(--muted);
+}
+.delta-pill.is-up {
+  background: color-mix(in srgb, var(--up) 14%, transparent);
+  color: var(--up);
+}
+.delta-pill.is-down {
+  background: color-mix(in srgb, var(--down) 14%, transparent);
+  color: var(--down);
+}
+
+/* Entrances: the chart line draws itself, the area fades in under it, the
+   score ring sweeps to its value. Once, on load; off under reduced motion. */
+.chart-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: chart-draw 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.chart-draw-fade {
+  animation: chart-fade 700ms ease 250ms both;
+}
+.score-ring {
+  transition: stroke-dasharray 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes chart-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes chart-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chart-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .chart-draw-fade {
+    animation: none;
+  }
+  .stat-tile,
+  .setup-item,
+  .dash-row,
+  .dash-topic,
+  .score-ring {
+    transition: none;
+  }
+  .stat-tile:hover {
+    transform: none;
+  }
+}
+
 /* A row with a run in flight gets a faint tint so the eye lands on it in a long list. */
 .writing-row {
   background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 4%, transparent), transparent 60%);

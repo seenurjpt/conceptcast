@@ -11,11 +11,11 @@ export const metadata: Metadata = {
  * on to `next`. The login gate in middleware keeps it signed-in only, and
  * nothing else links here, so it shows exactly once per sign-in.
  *
- * `next` is only ever a same-site path; anything else falls back to Topics.
+ * `next` is only ever a same-site path; anything else falls back to the dashboard.
  */
 function safeNext(raw: string | string[] | undefined): string {
   const v = Array.isArray(raw) ? raw[0] : raw;
-  if (!v || !v.startsWith('/') || v.startsWith('//') || v.startsWith('/\\') || v.startsWith('/welcome')) return '/backlog';
+  if (!v || !v.startsWith('/') || v.startsWith('//') || v.startsWith('/\\') || v.startsWith('/welcome')) return '/dashboard';
   return v;
 }
 

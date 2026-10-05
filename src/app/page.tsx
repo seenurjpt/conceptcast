@@ -5,7 +5,7 @@ import { FAQ } from './landing/faq';
 
 /**
  * The front door, rendered once at build time and served as a static file.
- * Signed-in visitors never reach it: the middleware redirects them to Topics
+ * Signed-in visitors never reach it: the middleware redirects them to the dashboard
  * at the edge, from the cookie alone, so this page needs no database and no
  * per-request rendering.
  */

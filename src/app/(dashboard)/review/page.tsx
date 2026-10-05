@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { getJson, sendJson, fmtRelative, fmtDate, toLocalInput, LINKEDIN_FOLD } from '@/lib/ui';
 import { checkHardConstraints, lengthLimits } from '@/lib/pipeline/constraints';
 import { useSession } from '@/components/SessionProvider';
-import { useDialog } from '@/components/Modal';
+import { Modal, useDialog } from '@/components/Modal';
+import { PublishSlider } from '@/components/PublishSlider';
 import {
   ActionButton,
   CharMeter,
@@ -267,30 +268,18 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
   const dialog = useDialog();
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState(draft.body);
-  const [readToEnd, setReadToEnd] = useState(false);
   const [when, setWhen] = useState('');
   const [angle, setAngle] = useState<(typeof ANGLES)[number]>('mechanism');
   const [pane, setPane] = useState<'draft' | 'research' | 'critique'>('draft');
   const [watermark, setWatermark] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   useEffect(() => setWatermark(readWatermarkPref()), []);
   const watermarkOverflow = watermark && watermarkWouldOverflow(body);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const violations = useMemo(() => checkHardConstraints(body, { kind: announcement ? 'announcement' : 'post' }), [body, announcement]);
   const dirty = body !== draft.body;
   const canDecide = draft.status === 'pending' || draft.status === 'approved';
   const canPublish = session?.signedIn ?? false;
-
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) setReadToEnd(true);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el && el.scrollHeight <= el.clientHeight + 4) setReadToEnd(true);
-  }, [body, editing, pane]);
 
   const sources = useMemo(() => {
     const map = new Map<string, { url: string; title: string | null; resolved: boolean | null; facts: number }>();
@@ -310,16 +299,48 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
     ? null
     : dirty
       ? 'Save or discard your edit first.'
-      : !readToEnd
-        ? 'Scroll to the end of the draft to enable approving.'
-        : !canPublish && !when
+      : !canPublish && !when
           ? 'Sign in with LinkedIn to publish now, or pick a time to schedule it.'
           : watermarkOverflow
             ? 'With the watermark this post passes LinkedIn’s 3000 character limit. Shorten it or turn the watermark off.'
             : null;
 
+  // The same problems in a few words: the slider's error label when one
+  // stops a publish.
+  const shortBlocker = !approveBlocker
+    ? null
+    : dirty
+      ? 'Save your edit first'
+      : !canPublish && !when
+          ? 'Sign in or schedule'
+          : 'Too long';
+
+  const publishedMsg = useRef<string | null>(null);
+  const confirmPublish = async () => {
+    if (approveBlocker) throw new Error(approveBlocker);
+    const scheduledFor = when ? new Date(when).toISOString() : undefined;
+    const r = await sendJson<{ outcome: { status: string; error?: string; postUrn?: string } }>(
+      `/api/drafts/${draft._id}/approve`,
+      'POST',
+      { scheduledFor, watermark },
+    );
+    if (r.outcome.status === 'failed') throw new Error(`Approved, but publishing failed: ${r.outcome.error}`);
+    publishedMsg.current = r.outcome.status === 'published' ? `Published to LinkedIn: ${r.outcome.postUrn}` : 'Approved and scheduled.';
+  };
+  // Let the done pill show before the list refreshes and this draft moves on.
+  const afterPublish = () => {
+    window.setTimeout(() => void run(async () => publishedMsg.current ?? undefined), 1400);
+  };
+  const publishFailed = (reason: unknown) => {
+    void run(async () => {
+      throw reason instanceof Error ? reason : new Error(String(reason));
+    });
+  };
+  const sliderLabel = when ? 'Slide to schedule' : 'Slide to publish';
+  const sliderDone = when ? 'Scheduled' : 'Published';
+
   return (
-    <div className="min-w-0 space-y-4">
+    <div className={`min-w-0 space-y-4 ${canDecide ? 'pb-24 xl:pb-0' : ''}`}>
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
@@ -339,6 +360,16 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
             )}
             <span className="badge badge-quiet">v{draft.version}</span>
             {draft.critique && <ScoreBadge score={draft.critique.score} passed={draft.critique.depthPassed} />}
+            {!announcement && (
+              <button type="button" className="btn btn-quiet btn-sm ml-1" onClick={() => setSourcesOpen(true)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+                  <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+                </svg>
+                Sources
+                <span className="rounded-full bg-[var(--surface-strong)] px-1.5 text-[11px] font-semibold leading-[18px]">{sources.length}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -361,7 +392,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
       </Card>
 
       <div className="grid items-start gap-4 xl:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
+        <div className="min-w-0 xl:col-start-1 xl:row-start-1">
           <div className="card-flush">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline px-5 py-3">
               <Segmented
@@ -399,7 +430,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                     autoFocus
                   />
                 ) : (
-                  <div ref={scrollRef} onScroll={checkScroll} className="scroll-slim post-text max-h-[520px] overflow-y-auto pr-2">
+                  <div className="scroll-slim post-text max-h-[520px] overflow-y-auto pr-2">
                     {body}
                   </div>
                 )}
@@ -423,7 +454,6 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                           run(async () => {
                             await sendJson(`/api/drafts/${draft._id}`, 'PATCH', { body });
                             setEditing(false);
-                            setReadToEnd(false);
                             return 'Saved your edit.';
                           })
                         }
@@ -546,7 +576,9 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
               </div>
             )}
           </div>
+        </div>
 
+        <div className="min-w-0 xl:col-start-1 xl:row-start-2">
           <Card title={`Hook · first ${LINKEDIN_FOLD} characters`}>
             <p className="post-text">
               {body.slice(0, LINKEDIN_FOLD)}
@@ -555,106 +587,20 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
           </Card>
         </div>
 
-        <div className="space-y-4">
-          {/* An announcement cites nothing, so there is no Sources card for it. */}
-          {!announcement && (
-          <Card title="Sources">
-            {sources.length === 0 ? (
-              <p className="text-[13px] text-muted">No sources recorded.</p>
-            ) : (
-              <ul className="row-list">
-                {sources.map((s) => (
-                  <li key={s.url} className="row min-w-0">
-                    {/* A source without a title falls back to its raw URL,
-                        which has no spaces to break on: break-all, not
-                        break-words, or it runs off the screen edge. */}
-                    <a
-                      className={`t-body-sm line-clamp-2 font-medium text-primary hover:underline ${
-                        s.title ? 'break-words' : 'break-all'
-                      }`}
-                      href={s.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {s.title ?? s.url}
-                    </a>
-                    <div className="t-caption mt-0.5 flex flex-wrap items-center gap-x-2 text-muted">
-                      <span className="truncate">{new URL(s.url).hostname}</span>
-                      {s.resolved === false && <span className="text-down">fetch failed</span>}
-                      {s.facts > 0 && (
-                        <span>
-                          <span className="t-number text-[12px]">{s.facts}</span> fact{s.facts === 1 ? '' : 's'}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-          )}
-
+        <div className="min-w-0 space-y-4 xl:sticky xl:top-20 xl:col-start-2 xl:row-span-2 xl:row-start-1">
           {canDecide && (
-            <Card title="Decision">
-              <div className="space-y-3">
-                <div>
-                  <label className="label" htmlFor="when">
-                    Schedule
-                  </label>
-                  <input
-                    id="when"
-                    type="datetime-local"
-                    className="input w-full"
-                    value={when}
-                    min={toLocalInput(new Date())}
-                    onChange={(e) => setWhen(e.target.value)}
-                  />
-                  <p className="t-caption mt-1.5 text-muted">Leave empty to publish immediately.</p>
-                </div>
-
-                <div className="border-t border-hairline pt-3">
-                  <Switch
-                    id="watermark"
-                    checked={watermark}
-                    onChange={(on) => {
-                      setWatermark(on);
-                      writeWatermarkPref(on);
-                    }}
-                    label="Add “Posted from conceptcast”"
-                    hint="A line under the post linking readers to the app."
-                  />
-                  {watermark && (
-                    <p className="watermark-preview t-caption mt-2 text-body">
-                      {WATERMARK_LINE.replace(APP_URL, '')}
-                      <a className="text-primary hover:underline" href={APP_URL} target="_blank" rel="noreferrer">
-                        {APP_URL}
-                      </a>
-                    </p>
-                  )}
-                </div>
-
+            <Card title="Publish">
+              <div id="publish-card" className="scroll-mt-24 space-y-3">
                 {approveBlocker && <p className="t-caption text-muted">{approveBlocker}</p>}
 
-                <ActionButton
-                  className="btn btn-primary w-full"
-                  disabled={Boolean(approveBlocker)}
-                  pendingLabel="Publishing…"
-                  onClick={() =>
-                    run(async () => {
-                      const scheduledFor = when ? new Date(when).toISOString() : undefined;
-                      const r = await sendJson<{ outcome: { status: string; error?: string; postUrn?: string } }>(
-                        `/api/drafts/${draft._id}/approve`,
-                        'POST',
-                        { scheduledFor, watermark },
-                      );
-                      if (r.outcome.status === 'published') return `Published to LinkedIn: ${r.outcome.postUrn}`;
-                      if (r.outcome.status === 'failed') throw new Error(`Approved, but publishing failed: ${r.outcome.error}`);
-                      return 'Approved and scheduled.';
-                    })
-                  }
-                >
-                  {when ? 'Approve & schedule' : 'Approve & publish now'}
-                </ActionButton>
+                <PublishSlider
+                  label={sliderLabel}
+                  doneLabel={sliderDone}
+                  errorLabel={shortBlocker ?? 'Publishing failed'}
+                  onConfirm={confirmPublish}
+                  onDone={afterPublish}
+                  onError={publishFailed}
+                />
 
                 <ActionButton
                   className="btn btn-danger w-full"
@@ -678,6 +624,44 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                 >
                   Reject
                 </ActionButton>
+
+                <div className="border-t border-hairline pt-3">
+                  <div>
+                    <label className="label" htmlFor="when">
+                      Schedule
+                    </label>
+                    <input
+                      id="when"
+                      type="datetime-local"
+                      className="input w-full"
+                      value={when}
+                      min={toLocalInput(new Date())}
+                      onChange={(e) => setWhen(e.target.value)}
+                    />
+                    <p className="t-caption mt-1.5 text-muted">Leave empty to publish immediately.</p>
+                  </div>
+                </div>
+
+                <div className="border-t border-hairline pt-3">
+                  <Switch
+                    id="watermark"
+                    checked={watermark}
+                    onChange={(on) => {
+                      setWatermark(on);
+                      writeWatermarkPref(on);
+                    }}
+                    label="Add “Posted from conceptcast”"
+                    hint="A line under the post linking readers to the app."
+                  />
+                  {watermark && (
+                    <p className="watermark-preview t-caption mt-2 text-body">
+                      {WATERMARK_LINE.replace(APP_URL, '')}
+                      <a className="text-primary hover:underline" href={APP_URL} target="_blank" rel="noreferrer">
+                        {APP_URL}
+                      </a>
+                    </p>
+                  )}
+                </div>
 
                 {announcement ? (
                   <div className="border-t border-hairline pt-3">
@@ -742,6 +726,83 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
           )}
         </div>
       </div>
+
+      {/* Phones and tablets: the Publish card comes after the draft, so the
+          primary action is pinned to the bottom of the screen as well. */}
+      {canDecide && (
+        <div className="review-actionbar xl:hidden">
+          <div className="mx-auto flex max-w-[1200px] items-center gap-2 px-4 py-3 sm:px-5">
+            <a href="#publish-card" className="btn btn-quiet btn-sm bar-options shrink-0">
+              Options
+            </a>
+            <div className="min-w-0 flex-1">
+              <PublishSlider
+                height={44}
+                label={sliderLabel}
+                doneLabel={sliderDone}
+                errorLabel={shortBlocker ?? 'Failed'}
+                onConfirm={confirmPublish}
+                onDone={afterPublish}
+                onError={publishFailed}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sourcesOpen && (
+        <Modal
+          title="Sources"
+          subtitle={
+            sources.length
+              ? `${sources.length} source${sources.length === 1 ? '' : 's'} · ${sources.reduce((n, x) => n + x.facts, 0)} facts cited. Open them before you approve.`
+              : undefined
+          }
+          onClose={() => setSourcesOpen(false)}
+          size="lg"
+        >
+          {sources.length === 0 ? (
+            <p className="py-6 text-center text-[13px] text-muted">No sources recorded for this draft.</p>
+          ) : (
+            <ul className="-my-1 divide-y divide-hairline">
+              {sources.map((x) => {
+                const host = new URL(x.url).hostname.replace(/^www\./, '');
+                return (
+                  <li key={x.url} className="flex min-w-0 items-start gap-3 py-3">
+                    <span
+                      aria-hidden
+                      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--surface-strong)] text-[12px] font-bold uppercase text-muted"
+                    >
+                      {host[0]}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      {/* A source without a title falls back to its raw URL,
+                          which has no spaces to break on: break-all, not
+                          break-words, or it runs off the screen edge. */}
+                      <p className={`t-body-sm line-clamp-2 font-semibold ${x.title ? 'break-words' : 'break-all'}`}>{x.title ?? x.url}</p>
+                      <p className="t-caption mt-0.5 flex flex-wrap items-center gap-x-2 text-muted">
+                        <span className="truncate">{host}</span>
+                        {x.facts > 0 && (
+                          <span className="rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] px-1.5 font-semibold text-primary">
+                            {x.facts} fact{x.facts === 1 ? '' : 's'}
+                          </span>
+                        )}
+                        {x.resolved === false && <span className="text-down">fetch failed</span>}
+                      </p>
+                    </div>
+                    <a className="btn btn-quiet btn-sm shrink-0" href={x.url} target="_blank" rel="noreferrer">
+                      Open<span className="sr-only"> {x.title ?? host} in a new tab</span>
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+                        <path d="M6 3h7v7M13 3 5 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

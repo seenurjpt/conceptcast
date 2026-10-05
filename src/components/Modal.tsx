@@ -203,3 +203,93 @@ function Dialog({ pending, onClose }: { pending: Pending; onClose: (v: boolean |
     </div>
   );
 }
+
+/**
+ * A modal with arbitrary content (a list, a preview), for when confirm and
+ * prompt are not enough. Same behaviour as the dialogs above: Escape and the
+ * backdrop close it, Tab stays inside, the page behind is locked, and focus
+ * goes back to whatever opened it.
+ */
+export function Modal({
+  title,
+  subtitle,
+  onClose,
+  children,
+  size = 'md',
+}: {
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  onClose: () => void;
+  children: React.ReactNode;
+  size?: 'md' | 'lg';
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => opener?.focus?.();
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !panelRef.current) return;
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+        'button, input, textarea, select, [href], [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  useEffect(() => lockPage(), []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
+      <div
+        ref={panelRef}
+        className={`relative flex max-h-[85dvh] w-full flex-col rounded-t-[24px] border border-hairline bg-surface-card shadow-[0_16px_48px_rgba(0,0,0,0.28)] sm:rounded-[20px] ${
+          size === 'lg' ? 'sm:max-w-2xl' : 'sm:max-w-lg'
+        }`}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4">
+          <div className="min-w-0">
+            <h2 id="modal-title" className="t-title">
+              {title}
+            </h2>
+            {subtitle && <div className="t-body-sm mt-0.5 text-muted">{subtitle}</div>}
+          </div>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="-mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div className="scroll-slim min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+      </div>
+    </div>
+  );
+}

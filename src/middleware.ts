@@ -37,7 +37,7 @@ export async function middleware(req: NextRequest) {
   if (pathname === '/') {
     if (await verifySessionValue(req.cookies.get(SESSION_COOKIE)?.value)) {
       const url = req.nextUrl.clone();
-      url.pathname = '/backlog';
+      url.pathname = '/dashboard';
       return NextResponse.redirect(url);
     }
     return NextResponse.next();

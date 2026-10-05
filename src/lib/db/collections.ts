@@ -321,6 +321,16 @@ export const llmCalls = {
     const full = LlmCallSchema.parse({ ...doc, _id: new ObjectId(), at: new Date() });
     await (await col<LlmCallDoc>(COLLECTIONS.llmCalls)).insertOne(full);
   },
+  /** What a user's own keys have spent since a date: total cost and call count. */
+  async spendSince(userId: string, since: Date): Promise<{ costUsd: number; calls: number }> {
+    const [row] = await (await col<LlmCallDoc>(COLLECTIONS.llmCalls))
+      .aggregate<{ costUsd: number; calls: number }>([
+        { $match: { userId, at: { $gte: since } } },
+        { $group: { _id: null, costUsd: { $sum: '$costUsd' }, calls: { $sum: 1 } } },
+      ])
+      .toArray();
+    return { costUsd: row?.costUsd ?? 0, calls: row?.calls ?? 0 };
+  },
 };
 
 /* ── indexes ──────────────────────────────────────────────────────────────── */

@@ -40,7 +40,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     // Through the branded loader first; it forwards to where sign-in began,
     // keeping the signed-in flag the destination page reads.
-    const returnTo = req.cookies.get('li_oauth_return')?.value ?? '/backlog';
+    const returnTo = req.cookies.get('li_oauth_return')?.value ?? '/dashboard';
     const destination = new URL(returnTo, req.url);
     destination.searchParams.set('linkedin', 'signed-in');
     const res = back(req, { next: destination.pathname + destination.search }, '/welcome');
