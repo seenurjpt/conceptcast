@@ -1,6 +1,7 @@
 import { handler, ok } from '@/lib/api';
 import { Publication, Draft, Concept, Topic, type PublicationDoc, type DraftDoc, type ConceptDoc, type TopicDoc } from '@/lib/db/models';
 import { engagementScore, trackStats } from '@/lib/feedback';
+import { customTitle } from '@/lib/customPost';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,9 @@ export const GET = handler(async (req: Request) => {
       const announcement =
         d?.kind === 'announcement'
           ? { slug: 'announcement', title: `Starting ${topicTitle.get(String(d.topicId)) ?? 'a new topic'}`, track: 'announcement' }
-          : null;
+          : d?.kind === 'custom'
+            ? { slug: 'your-post', title: customTitle(d.hook), track: 'your-post' }
+            : null;
       return {
         ...p,
         hook: d?.hook ?? '',

@@ -121,7 +121,7 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
                 <HugeiconsIcon icon={Cancel01Icon} size={20} strokeWidth={1.8} />
               </button>
             </div>
-            <SidebarNav id="drawer" />
+            <SidebarNav id="drawer" onCompose={onClose} />
           </motion.div>
         </div>
       )}

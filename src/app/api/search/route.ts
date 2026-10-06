@@ -3,6 +3,7 @@ import { requireUserId } from '@/lib/session';
 import { Concept, Draft, Topic, type ConceptDoc, type DraftDoc, type TopicDoc } from '@/lib/db/models';
 import { exemplars } from '@/lib/db/collections';
 import { visibleTo } from '@/lib/topics/service';
+import { customTitle } from '@/lib/customPost';
 
 export const dynamic = 'force-dynamic';
 
@@ -147,15 +148,18 @@ export const GET = handler(async (req: Request) => {
     const c = d.concept[0];
     const topicId = c?.topicId ?? d.topicId;
     const title =
-      d.kind === 'announcement'
-        ? `Starting ${topicTitle.get(String(d.topicId)) ?? 'a new topic'}`
+      d.kind === 'custom'
+        ? customTitle(d.hook)
+        : d.kind === 'announcement'
+        ?`Starting ${topicTitle.get(String(d.topicId)) ?? 'a new topic'}`
         : (c?.title ?? d.hook.split('\n')[0].slice(0, 90));
     return {
       id: String(d._id),
       kind: d.status === 'published' ? 'published' : 'draft',
       title,
       context: topicId ? (topicTitle.get(String(topicId)) ?? null) : null,
-      snippet: snippetOf(`${d.hook}\n${d.body}`, terms),
+      // The hook is the body's first lines, so the body alone covers both.
+      snippet: snippetOf(d.body, terms),
       status: d.status,
       href: `/review?draft=${d._id}&status=${d.status}`,
     };

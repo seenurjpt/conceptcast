@@ -3,6 +3,7 @@ import { dbConnect } from '@/lib/db/connect';
 import { hasActiveSession } from '@/lib/session';
 import { Nav } from '@/components/Nav';
 import { Sidebar } from '@/components/Sidebar';
+import { Composer } from '@/components/Composer';
 import { LinkedInBanner } from '@/components/LinkedInBanner';
 import { ApiKeyBanner } from '@/components/ApiKeyBanner';
 import { SessionProvider } from '@/components/SessionProvider';
@@ -32,6 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <main className="mx-auto max-w-[1200px] px-4 py-6 sm:px-5 sm:py-8 lg:px-8">{children}</main>
         </div>
       </div>
+      <Composer />
     </SessionProvider>
   );
 }

@@ -39,15 +39,25 @@ export const ANNOUNCEMENT_BANNED_OPENERS = [
   'new journey',
 ];
 
-export type ConstraintKind = 'post' | 'announcement';
+/** A post the author wrote themselves: LinkedIn's own cap, nothing stricter. */
+export const CUSTOM_MAX_CHARS = 3_000;
+
+export type ConstraintKind = 'post' | 'announcement' | 'custom';
 
 export function lengthLimits(kind: ConstraintKind = 'post'): { min: number; max: number } {
+  if (kind === 'custom') return { min: 1, max: CUSTOM_MAX_CHARS };
   return kind === 'announcement' ? { min: ANNOUNCEMENT_MIN_CHARS, max: ANNOUNCEMENT_MAX_CHARS } : { min: MIN_CHARS, max: MAX_CHARS };
 }
 
 export function checkHardConstraints(body: string, opts: { kind?: ConstraintKind } = {}): string[] {
   const kind = opts.kind ?? 'post';
   const { min, max } = lengthLimits(kind);
+  // The author's own words: the house style rules are for the AI writer,
+  // not for them. Only the platform limit is enforced.
+  if (kind === 'custom') {
+    const len = body.trim().length;
+    return len < min || body.length > max ? [`length: ${body.length} chars (must be ${min}-${max})`] : [];
+  }
   const maxHashtags = kind === 'announcement' ? ANNOUNCEMENT_MAX_HASHTAGS : 3;
   const violations: string[] = [];
   const len = body.length;

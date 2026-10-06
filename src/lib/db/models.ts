@@ -207,8 +207,11 @@ const ResearchSchema = new Schema<ResearchDoc>({
 
 /* ── drafts ───────────────────────────────────────────────────────────────── */
 
-/** 'announcement' is only ever the angle of an announcement draft; the writer's angles are the first four. */
-export const DRAFT_ANGLES = ['mechanism', 'misconception', 'tradeoff', 'debug-story', 'announcement'] as const;
+/**
+ * The writer's angles are the first four; 'announcement' and 'custom' are
+ * only ever the angle of a draft of that kind.
+ */
+export const DRAFT_ANGLES = ['mechanism', 'misconception', 'tradeoff', 'debug-story', 'announcement', 'custom'] as const;
 export type DraftAngle = (typeof DRAFT_ANGLES)[number];
 export const DRAFT_STATUSES = ['pending', 'approved', 'rejected', 'published'] as const;
 export type DraftStatus = (typeof DRAFT_STATUSES)[number];
@@ -216,8 +219,11 @@ export type DraftStatus = (typeof DRAFT_STATUSES)[number];
  * 'post' = a researched explainer about one subtopic.
  * 'announcement' = a short "I'm starting to learn <topic>" post: no subtopic,
  * no research, no critic score, so those fields are null for it.
+ * 'custom' = a post the author wrote in the composer (optionally polished by
+ * AI): no subtopic, research or critic either, and only LinkedIn's own
+ * length limit applies to it.
  */
-export const DRAFT_KINDS = ['post', 'announcement'] as const;
+export const DRAFT_KINDS = ['post', 'announcement', 'custom'] as const;
 export type DraftKind = (typeof DRAFT_KINDS)[number];
 
 export interface DraftCritique {
@@ -556,6 +562,10 @@ const TopicSchema = new Schema<TopicDoc>({
 /* ── model registration (idempotent under dev reload) ─────────────────────── */
 
 function getModel<T>(name: string, schema: Schema<T>): Model<T> {
+  // A dev hot reload re-runs this file with the edited schema. Reusing the
+  // cached model would keep the old one (a new enum value is then rejected
+  // until the server restarts), so in development it is replaced instead.
+  if (process.env.NODE_ENV !== 'production' && mongoose.models[name]) mongoose.deleteModel(name);
   return (mongoose.models[name] as Model<T> | undefined) ?? mongoose.model<T>(name, schema);
 }
 

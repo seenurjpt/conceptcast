@@ -7,6 +7,7 @@ import { authState, getAuth } from '@/lib/publishers/linkedin';
 import { engagementScore } from '@/lib/feedback';
 import { listTopics } from '@/lib/topics/service';
 import { releaseStaleClaims } from '@/lib/pipeline/generate';
+import { customTitle } from '@/lib/customPost';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +78,7 @@ export const GET = handler(async (req: Request) => {
   const topicTitle = new Map(topicDocs.map((t) => [String(t._id), t.title]));
 
   const titleFor = (d: DraftDoc | undefined, conceptId: unknown) => {
+    if (d?.kind === 'custom') return { title: customTitle(d.hook), topic: 'Your post' };
     if (d?.kind === 'announcement') {
       return { title: `Starting ${topicTitle.get(String(d.topicId)) ?? 'a new topic'}`, topic: 'Announcement' };
     }

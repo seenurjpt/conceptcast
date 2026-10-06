@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { getJson, sendJson, fmtDate, fmtRelative, toLocalInput } from '@/lib/ui';
 import { useSession } from '@/components/SessionProvider';
 import { ActionButton, Card, EmptyState, Notice, PageHeader, TrackBadge } from '@/components/ui';
@@ -19,6 +19,35 @@ interface Pub {
 }
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+/** Chips shown per day before "+N more". */
+const PER_DAY = 2;
+/** Below this the fitted calendar gets too cramped; it scrolls with the page instead. */
+const MIN_FIT_HEIGHT = 420;
+/** main's bottom padding, so the card ends where the page's content would. */
+const BOTTOM_GAP = 32;
+
+/**
+ * From sm up, the month grid fills the rest of the screen exactly: its
+ * height is the viewport minus where the card starts, re-measured on resize
+ * and whenever something above it (a notice) changes. Phones keep the
+ * natural height and scroll.
+ */
+function useFitHeight(ref: React.RefObject<HTMLElement | null>, deps: unknown[]) {
+  const [height, setHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = ref.current;
+      if (!el || window.innerWidth < 640) return setHeight(null);
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      setHeight(Math.max(MIN_FIT_HEIGHT, Math.floor(window.innerHeight - top - BOTTOM_GAP)));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  return height;
+}
 
 export default function CalendarPage() {
   const { reload: reloadSession } = useSession();
@@ -30,6 +59,8 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const calRef = useRef<HTMLDivElement>(null);
+  const fitHeight = useFitHeight(calRef, [error, notice]);
 
   const load = useCallback(async () => {
     try {
@@ -71,7 +102,10 @@ export default function CalendarPage() {
     const start = new Date(first);
     start.setDate(first.getDate() - startOffset);
     const today = new Date().toDateString();
-    return Array.from({ length: 42 }, (_, i) => {
+    // Only the weeks this month touches: five for most months, six for some.
+    const daysInMonth = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+    const weeks = Math.ceil((startOffset + daysInMonth) / 7);
+    return Array.from({ length: weeks * 7 }, (_, i) => {
       const date = new Date(start);
       date.setDate(start.getDate() + i);
       const key = date.toDateString();
@@ -124,34 +158,41 @@ export default function CalendarPage() {
         {notice && <Notice kind="ok" onDismiss={() => setNotice(null)}>{notice}</Notice>}
       </div>
 
-      <div className="card-flush mt-4 overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-hairline">
+      <div
+        ref={calRef}
+        className="card-flush mt-4 flex flex-col overflow-hidden"
+        style={fitHeight ? { height: fitHeight } : undefined}
+      >
+        <div className="grid shrink-0 grid-cols-7 border-b border-hairline">
           {DAYS.map((d) => (
             <div key={d} className="label mb-0 px-1.5 py-2 text-center text-[10px] sm:px-3 sm:text-left sm:text-[12px]">
               {d}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7">
+        <div
+          className="grid min-h-0 flex-1 grid-cols-7"
+          style={fitHeight ? { gridTemplateRows: `repeat(${grid.length / 7}, minmax(0, 1fr))` } : undefined}
+        >
           {grid.map((cell, i) => (
             <div
               key={cell.date.toISOString()}
-              className={`min-h-[56px] border-hairline-soft p-1.5 sm:min-h-[92px] sm:p-2 ${i % 7 !== 6 ? 'border-r' : ''} ${i < 35 ? 'border-b' : ''} ${
+              className={`flex min-w-0 flex-col overflow-hidden border-hairline-soft p-1.5 sm:p-2 ${fitHeight ? 'min-h-0' : 'min-h-[56px] sm:min-h-[92px]'} ${i % 7 !== 6 ? 'border-r' : ''} ${i < grid.length - 7 ? 'border-b' : ''} ${
                 cell.inMonth ? '' : 'bg-surface-soft'
               }`}
             >
               <span
-                className={`t-number inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] sm:h-6 sm:w-6 sm:text-[12px] ${
+                className={`t-number inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] sm:h-6 sm:w-6 sm:text-[12px] ${
                   cell.isToday ? 'bg-primary text-on-primary' : cell.inMonth ? 'text-muted' : 'text-muted-soft'
                 }`}
               >
                 {cell.date.getDate()}
               </span>
-              {cell.pubs.map((p) => (
+              {cell.pubs.slice(0, cell.pubs.length > PER_DAY ? PER_DAY - 1 : PER_DAY).map((p) => (
                 <div
                   key={p._id}
                   title={p.hook}
-                  className={`mt-1 truncate rounded-[6px] px-1.5 py-1 text-[11px] font-medium ${
+                  className={`mt-1 shrink-0 truncate rounded-[6px] px-1.5 py-1 text-[11px] font-medium ${
                     p.status === 'published'
                       ? 'bg-[color-mix(in_srgb,var(--up)_14%,transparent)] text-up'
                       : p.status === 'failed'
@@ -162,6 +203,14 @@ export default function CalendarPage() {
                   {p.concept?.title ?? 'Untitled'}
                 </div>
               ))}
+              {cell.pubs.length > PER_DAY && (
+                <span
+                  className="mt-1 truncate px-1.5 text-[11px] font-medium text-muted"
+                  title={cell.pubs.map((p) => p.concept?.title ?? 'Untitled').join(', ')}
+                >
+                  +{cell.pubs.length - (PER_DAY - 1)} more
+                </span>
+              )}
             </div>
           ))}
         </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { getJson, fmtRelative, fmtDate } from '@/lib/ui';
 import { Notice, ScoreBadge } from '@/components/ui';
 import { AreaChart } from '@/components/AreaChart';
+import { openComposer } from '@/components/Composer';
 
 /**
  * The signed-in home: where things stand, and the one or two things worth
@@ -140,10 +141,10 @@ export default function DashboardPage() {
               </span>
             </Link>
           )}
-          <Link href="/backlog" className="btn btn-primary">
+          <button type="button" className="btn btn-primary" onClick={openComposer} aria-haspopup="dialog">
             <Icon name="pen" />
             Write a post
-          </Link>
+          </button>
         </div>
       </section>
 
@@ -264,7 +265,7 @@ export default function DashboardPage() {
           <div className={`mt-5 transition-opacity ${chartLoading ? 'opacity-40' : ''}`} key={data.range.weeks}>
             {total === 0 && prev === 0 ? (
               <p className="py-16 text-center text-[13px] text-muted">
-                No drafts yet in this period. Pick a subtopic and click Write a post to start.
+                No drafts yet in this period. Write a post, or pick a subtopic for AI to draft.
               </p>
             ) : (
               <AreaChart

@@ -22,6 +22,7 @@ import {
   SentIcon,
 } from '@hugeicons/core-free-icons';
 import { NAV_GROUPS, SETTINGS } from './Sidebar';
+import { openComposer } from './Composer';
 import { lockPage } from '@/lib/pageLock';
 import type { SearchHit, SearchKind } from '@/app/api/search/route';
 
@@ -266,7 +267,8 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       href: p.href,
     }));
     const actions: Row[] = [
-      { key: 'act:write', icon: PencilEdit02Icon, title: 'Write a post', context: 'Pick a topic and subtopic', href: '/backlog' },
+      { key: 'act:write', icon: PencilEdit02Icon, title: 'Write a post', context: 'Your own words, polished with AI', action: openComposer },
+      { key: 'act:topic', icon: Layers01Icon, title: 'Write from a topic', context: 'AI researches and drafts it', href: '/backlog' },
       { key: 'act:theme', icon: Moon02Icon, title: 'Switch theme', context: 'Light or dark', action: toggleTheme },
     ];
     const toRow = (h: SearchHit, icon?: IconSvgElement): Row => ({

@@ -8,6 +8,7 @@ import { checkHardConstraints, lengthLimits } from '@/lib/pipeline/constraints';
 import { useSession } from '@/components/SessionProvider';
 import { Modal, useDialog } from '@/components/Modal';
 import { PublishSlider } from '@/components/PublishSlider';
+import { customTitle } from '@/lib/customPost';
 import {
   ActionButton,
   CharMeter,
@@ -57,7 +58,7 @@ interface ConceptLite {
 interface DraftRow {
   _id: string;
   /** Older rows arrive without it; treated as 'post'. */
-  kind?: 'post' | 'announcement';
+  kind?: 'post' | 'announcement' | 'custom';
   angle: string;
   hook: string;
   body: string;
@@ -96,8 +97,11 @@ interface DraftDetail {
 }
 
 const isAnnouncement = (d: Pick<DraftRow, 'kind'>) => d.kind === 'announcement';
+/** Written by the author in the composer. */
+const isCustom = (d: Pick<DraftRow, 'kind'>) => d.kind === 'custom';
 /** What to call a draft in the list and the panel header. */
 function draftTitle(d: DraftRow, topicTitle?: string | null): string {
+  if (isCustom(d)) return customTitle(d.hook);
   if (isAnnouncement(d)) return `Starting ${topicTitle ?? d.topic?.title ?? 'a new topic'}`;
   return d.concept?.title ?? 'Unknown';
 }
@@ -248,7 +252,9 @@ export default function ReviewPage() {
                     {d.critique && <ScoreBadge score={d.critique.score} passed={d.critique.depthPassed} />}
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    {isAnnouncement(d) ? (
+                    {isCustom(d) ? (
+                      <TrackBadge track="your-post" />
+                    ) : isAnnouncement(d) ? (
                       <TrackBadge track="announcement" />
                     ) : (
                       <>
@@ -277,7 +283,11 @@ export default function ReviewPage() {
 function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Promise<string | void>) => Promise<void> }) {
   const { draft, concept, research, previous, publication, topic } = detail;
   const announcement = isAnnouncement(draft);
-  const limits = lengthLimits(announcement ? 'announcement' : 'post');
+  const custom = isCustom(draft);
+  const kind = draft.kind ?? 'post';
+  // Announcements and your own posts have no subtopic, research or critic.
+  const simple = announcement || custom;
+  const limits = lengthLimits(kind);
   const { session } = useSession();
   const dialog = useDialog();
   const [editing, setEditing] = useState(false);
@@ -290,7 +300,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
   useEffect(() => setWatermark(readWatermarkPref()), []);
   const watermarkOverflow = watermark && watermarkWouldOverflow(body);
 
-  const violations = useMemo(() => checkHardConstraints(body, { kind: announcement ? 'announcement' : 'post' }), [body, announcement]);
+  const violations = useMemo(() => checkHardConstraints(body, { kind }), [body, kind]);
   const dirty = body !== draft.body;
   const canDecide = draft.status === 'pending' || draft.status === 'approved';
   const canPublish = session?.signedIn ?? false;
@@ -358,13 +368,17 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="t-title">{announcement ? draftTitle(draft, topic?.title) : (concept?.title ?? 'Unknown concept')}</h2>
+            <h2 className="t-title">{simple ? draftTitle(draft, topic?.title) : (concept?.title ?? 'Unknown concept')}</h2>
             <p className="t-body-sm mt-0.5 text-body">
-              {announcement ? 'Telling your network you are learning this in public. No research or critic score; the machine checks still run.' : concept?.oneLiner}
+              {custom
+                ? 'A post you wrote. Only LinkedIn’s 3000 character limit applies.'
+                : announcement ? 'Telling your network you are learning this in public. No research or critic score; the machine checks still run.' : concept?.oneLiner}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            {announcement ? (
+            {custom ? (
+              <TrackBadge track="your-post" />
+            ) : announcement ? (
               <TrackBadge track="announcement" />
             ) : (
               <>
@@ -374,7 +388,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
             )}
             <span className="badge badge-quiet">v{draft.version}</span>
             {draft.critique && <ScoreBadge score={draft.critique.score} passed={draft.critique.depthPassed} />}
-            {!announcement && (
+            {!simple && (
               <button type="button" className="btn btn-quiet btn-sm ml-1" onClick={() => setSourcesOpen(true)}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
@@ -413,7 +427,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                 value={pane}
                 onChange={setPane}
                 options={
-                  announcement
+                  simple
                     ? [{ value: 'draft', label: 'Draft' }]
                     : [
                         { value: 'draft', label: 'Draft' },
@@ -677,7 +691,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                   )}
                 </div>
 
-                {announcement ? (
+                {custom ? null : announcement ? (
                   <div className="border-t border-hairline pt-3">
                     <ActionButton
                       className="btn btn-quiet w-full"

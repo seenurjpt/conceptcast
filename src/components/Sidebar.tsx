@@ -19,6 +19,7 @@ import {
   SidebarLeftIcon,
 } from '@hugeicons/core-free-icons';
 import { LogoMark } from './Logo';
+import { openComposer } from './Composer';
 
 type Item = { href: string; label: string; icon: IconSvgElement };
 
@@ -57,10 +58,13 @@ export function SidebarNav({
   id,
   collapsed = false,
   onTip,
+  onCompose,
 }: {
   id: string;
   collapsed?: boolean;
   onTip?: (tip: Tip) => void;
+  /** Called after the composer opens, so the phone drawer can close behind it. */
+  onCompose?: () => void;
 }) {
   const path = usePathname();
 
@@ -111,12 +115,23 @@ export function SidebarNav({
 
   return (
     <div className="side-body">
-      <Link href="/backlog" className="side-cta" aria-label={collapsed ? 'Write a post' : undefined} {...tipProps('Write a post')}>
+      <button
+        type="button"
+        className="side-cta"
+        aria-label={collapsed ? 'Write a post' : undefined}
+        aria-haspopup="dialog"
+        onClick={() => {
+          onTip?.(null);
+          openComposer();
+          onCompose?.();
+        }}
+        {...tipProps('Write a post')}
+      >
         <span className="side-icon">
           <HugeiconsIcon icon={PencilEdit02Icon} size={18} strokeWidth={1.9} />
         </span>
         <span className="side-label">Write a post</span>
-      </Link>
+      </button>
 
       <nav aria-label="Main" className="side-nav scroll-slim">
         {NAV_GROUPS.map((g) => (

@@ -1742,6 +1742,13 @@ html:has(.lp-page) {
 .track-announcement {
   --track: var(--primary);
 }
+/* Posts the author wrote in the composer. */
+.track-your-post {
+  --track: #0e7490;
+}
+:root[data-theme='dark'] .track-your-post {
+  --track: #22d3ee;
+}
 
 /* ── welcome loader (shown once, right after sign-in) ─────────────────────── */
 
@@ -1941,8 +1948,11 @@ html:has(.lp-page) {
   display: flex;
   flex: none;
   align-items: center;
-  height: 64px;
+  /* The top bar's height and divider (64px plus its 1px border), so the
+     line runs unbroken across the sidebar and the page. */
+  height: 65px;
   padding-left: 26px;
+  border-bottom: 1px solid var(--hairline);
 }
 .side-brand {
   display: flex;
@@ -1991,6 +2001,11 @@ html:has(.lp-page) {
   min-height: 0;
   flex-direction: column;
   padding: 4px 12px 12px;
+}
+/* On the rail, the first button lines up with the top of the page content
+   (the top bar's 65px, then main's 32px top padding). */
+.app-sidebar .side-body {
+  padding-top: 32px;
 }
 
 /* Labels fade and drift left as the rail narrows; the icons never move,
@@ -2831,5 +2846,701 @@ html:has(.lp-page) {
     50% {
       opacity: 0.45;
     }
+  }
+}
+
+/* ── composer ("Write a post") ───────────────────────────────────────────── */
+/* A bottom sheet on phones, a centred dialog from sm up. The body scrolls
+   between a fixed header and a fixed footer, so the publish controls are
+   always in reach however long the post gets. */
+.cmp-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.cmp-panel {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  max-height: 94dvh;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-bottom: 0;
+  border-radius: 20px 20px 0 0;
+  background: var(--surface-card);
+  box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.25);
+}
+@media (min-width: 640px) {
+  .cmp-panel {
+    inset: auto;
+    top: 50%;
+    left: 50%;
+    width: min(680px, calc(100% - 32px));
+    max-height: min(860px, calc(100dvh - 48px));
+    border-bottom: 1px solid var(--hairline);
+    border-radius: 20px;
+    box-shadow:
+      0 24px 64px rgba(0, 0, 0, 0.3),
+      0 2px 8px rgba(0, 0, 0, 0.08);
+    translate: -50% -50%;
+  }
+}
+.cmp-inner {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.cmp-head {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--hairline);
+}
+.cmp-icon-btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: -4px -6px 0 0;
+  border-radius: 100px;
+  color: var(--muted);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.cmp-icon-btn:hover {
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+
+.cmp-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 20px 18px;
+}
+.cmp-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cmp-editor {
+  position: relative;
+  margin-top: 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  background: var(--canvas);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+.cmp-editor:focus-within {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--hairline));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+.cmp-textarea {
+  display: block;
+  width: 100%;
+  min-height: 200px;
+  max-height: 42dvh;
+  padding: 14px 16px;
+  resize: none;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink);
+  /* 16px stops iOS zooming the page on focus. */
+  font-size: 16px;
+  line-height: 1.6;
+  outline: none;
+}
+@media (min-width: 640px) {
+  .cmp-textarea {
+    font-size: 15px;
+  }
+}
+.cmp-textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* While AI rewrites: the text dims under a sweeping shimmer. */
+.cmp-editor.is-busy .cmp-textarea {
+  opacity: 0.45;
+}
+.cmp-editor.is-busy::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--primary) 14%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  pointer-events: none;
+  animation: cmp-shimmer 1.4s linear infinite;
+}
+@keyframes cmp-shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+.cmp-busy {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 100px;
+  background: var(--surface-card);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  translate: -50% -50%;
+}
+.cmp-busy-icon {
+  display: grid;
+  color: var(--primary);
+  animation: cmp-pulse 1.1s ease-in-out infinite;
+}
+@keyframes cmp-pulse {
+  50% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+}
+
+.cmp-meta {
+  display: flex;
+  min-height: 22px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+.cmp-ai-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  font-weight: 500;
+}
+.cmp-count {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.cmp-count.is-near {
+  color: var(--attention);
+}
+.cmp-count.is-over {
+  color: var(--down);
+  font-weight: 600;
+}
+.cmp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.cmp-link:hover {
+  text-decoration: underline;
+}
+
+.cmp-ai {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 7%, var(--surface-soft)),
+    var(--surface-soft) 60%
+  );
+}
+.cmp-ai-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.cmp-ai-title > svg {
+  color: var(--primary);
+}
+.cmp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.cmp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 100px;
+  background: var(--surface-card);
+  color: var(--body);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 120ms ease;
+}
+.cmp-chip:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--hairline));
+  color: var(--ink);
+}
+.cmp-chip:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.cmp-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.cmp-chip.is-on,
+.cmp-chip.is-busy {
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-card));
+  color: var(--primary);
+  opacity: 1;
+}
+.cmp-chip:focus-visible,
+.cmp-icon-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.cmp-ask {
+  overflow: hidden;
+}
+.cmp-ask-row {
+  display: flex;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.cmp-error {
+  margin-top: 10px;
+  color: var(--down);
+  font-size: 13px;
+}
+.cmp-note {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.cmp-alt {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.cmp-foot {
+  flex: none;
+  padding: 12px 20px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--hairline);
+  background: var(--surface-card);
+}
+.cmp-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+.cmp-when {
+  width: auto;
+  height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.cmp-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--body);
+  font-size: 13px;
+  cursor: pointer;
+}
+.cmp-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+.cmp-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.cmp-save {
+  height: 48px;
+  flex: none;
+  gap: 6px;
+}
+
+.cmp-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 44px 24px 40px;
+}
+.cmp-done-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 100px;
+  animation: cmp-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.cmp-done-icon.is-published {
+  background: color-mix(in srgb, var(--up) 14%, transparent);
+  color: var(--up);
+}
+.cmp-done-icon.is-scheduled,
+.cmp-done-icon.is-saved {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+@keyframes cmp-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+/* The sidebar's call to action is a button now (it opens the composer). */
+button.side-cta {
+  width: 100%;
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmp-editor.is-busy::after,
+  .cmp-busy-icon,
+  .cmp-done-icon {
+    animation: none;
+  }
+}
+/* Phones: the AI presets scroll sideways in one row instead of stacking. */
+@media (max-width: 639px) {
+  .cmp-chips {
+    flex-wrap: nowrap;
+    margin: 10px -14px 0;
+    padding: 0 14px 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .cmp-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .cmp-chip {
+    flex: none;
+  }
+}
+
+/* ── not found and error screens ─────────────────────────────────────────── */
+.status-screen {
+  position: relative;
+  display: flex;
+  min-height: 60vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+  color: var(--ink);
+}
+.status-screen.is-fullscreen {
+  min-height: 100dvh;
+  padding: 88px 20px 48px;
+  overflow: hidden;
+  background: var(--canvas);
+}
+/* A soft wash of the brand blue behind the art, over a faint dot grid. */
+.status-screen.is-fullscreen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 55% at 50% 42%, #000 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse 60% 55% at 50% 42%, #000 20%, transparent 75%);
+  pointer-events: none;
+}
+.status-screen::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  width: min(520px, 90vw);
+  height: 320px;
+  margin-left: calc(min(520px, 90vw) / -2);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--primary) 14%, transparent), transparent);
+  pointer-events: none;
+}
+.status-brand {
+  position: absolute;
+  top: 22px;
+  left: 24px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  max-width: 520px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: status-in 420ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes status-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.status-code {
+  margin-top: 22px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.status-code.is-lost {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+.status-code.is-broken {
+  background: color-mix(in srgb, var(--down) 12%, transparent);
+  color: var(--down);
+}
+.status-title {
+  margin-top: 14px;
+  font-size: clamp(28px, 5vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.status-text {
+  margin-top: 12px;
+  color: var(--body);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 26px;
+}
+.status-foot {
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.status-foot kbd {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--body);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+}
+.status-ref {
+  padding: 2px 8px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--body);
+  font-family: var(--font-mono-face), ui-monospace, monospace;
+  font-size: 12px;
+}
+.status-ref:hover {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--hairline));
+}
+.status-details {
+  margin-top: 12px;
+  text-align: left;
+}
+.status-details summary {
+  cursor: pointer;
+  text-align: center;
+}
+.status-details pre {
+  max-width: min(640px, 90vw);
+  max-height: 240px;
+  margin-top: 10px;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--body);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* The art: the logo's nodes and path, at illustration size. */
+.status-art {
+  width: 180px;
+  height: 135px;
+  overflow: visible;
+  color: var(--primary);
+}
+.sa-link {
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+.sa-node {
+  fill: currentColor;
+}
+.sa-node-1 {
+  opacity: 0.6;
+}
+.sa-node-2 {
+  opacity: 0.85;
+}
+/* Lost: the path fades into dashes and stops short of the drifting node. */
+.sa-trail {
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 2 7;
+  opacity: 0.35;
+  animation: sa-dash 1.6s linear infinite;
+}
+.sa-lost {
+  fill: color-mix(in srgb, var(--primary) 10%, transparent);
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-dasharray: 5 4;
+}
+.sa-lost-dot {
+  fill: currentColor;
+}
+.sa-drift {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sa-drift 4.2s ease-in-out infinite;
+}
+@keyframes sa-dash {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+@keyframes sa-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(5px, -7px) rotate(25deg);
+  }
+}
+/* Broken: the path snaps with a spark; the last node pulses red. */
+.status-art.is-broken .sa-link-far {
+  stroke: var(--down);
+  opacity: 0.45;
+}
+.sa-spark {
+  stroke: var(--attention);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: sa-flicker 1.8s ease-in-out infinite;
+}
+.sa-bad {
+  fill: var(--down);
+}
+.sa-ring {
+  fill: none;
+  stroke: var(--down);
+  stroke-width: 2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sa-ring 2s ease-out infinite;
+}
+@keyframes sa-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.25;
+  }
+  55% {
+    opacity: 0.9;
+  }
+}
+@keyframes sa-ring {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-body,
+  .sa-trail,
+  .sa-drift,
+  .sa-spark,
+  .sa-ring {
+    animation: none;
+  }
+  .sa-ring {
+    opacity: 0;
   }
 }
