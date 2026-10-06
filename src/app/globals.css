@@ -3544,3 +3544,197 @@ button.side-cta {
     opacity: 0;
   }
 }
+
+/* ── landing: the drone (hero and closing call to action) ────────────────── */
+.landing-mascot {
+  position: relative;
+  margin: 0 auto;
+}
+.landing-mascot-in {
+  position: relative;
+  z-index: 1;
+  /* A pop by transform only: it appears once both sheets have loaded, so
+     there is nothing to fade over. */
+  animation: landing-mascot-in 560ms ease-out backwards;
+}
+.landing-mascot-in button:focus-visible {
+  border-radius: 24px;
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+@keyframes landing-mascot-in {
+  from {
+    transform: translateY(14px) scale(0.6);
+  }
+  60% {
+    transform: translateY(-3px) scale(1.04);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* Hero: hovers inside the eclipse just above the lit rim, bobbing gently
+   over a soft blue thruster glow. */
+.lp-hero-mascot {
+  position: absolute;
+  top: calc(var(--rim) - 168px);
+  left: 50%;
+  /* Above .lp-cine-content: that block starts at the top of the hero (its
+     padding clears the eclipse), so it would otherwise swallow the clicks. */
+  z-index: 2;
+  transform: translateX(-50%);
+}
+@media (max-width: 639px) {
+  .lp-hero-mascot {
+    top: calc(var(--rim) - 128px);
+  }
+}
+/* Short phones: the gap between the floating nav and the rim is smaller
+   than the drone, so the hero goes without it (the closing section keeps
+   its own). */
+@media (max-width: 639px) and (max-height: 759px) {
+  .lp-hero-mascot {
+    display: none;
+  }
+}
+.landing-mascot-float {
+  position: relative;
+  z-index: 1;
+}
+.landing-mascot.is-hero .landing-mascot-in {
+  animation-duration: 700ms;
+}
+.landing-mascot.is-hero .landing-mascot-float {
+  animation: landing-mascot-hover 3.6s ease-in-out 700ms infinite;
+}
+.landing-mascot.is-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  width: 70%;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(120, 165, 255, 0.55), rgba(0, 82, 255, 0.18) 60%, transparent);
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: landing-mascot-glow 3.6s ease-in-out 700ms infinite;
+}
+@keyframes landing-mascot-hover {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes landing-mascot-glow {
+  50% {
+    opacity: 0.55;
+    transform: translateX(-50%) scale(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-mascot-in,
+  .landing-mascot.is-hero .landing-mascot-float,
+  .landing-mascot.is-hero::after {
+    animation: none;
+  }
+}
+
+/* The hero drone's speech bubble: glass on the eclipse's dark sky (the hero
+   is dark in both themes), its tail pointing back at the drone. */
+.hero-mascot {
+  position: relative;
+}
+.hero-bubble {
+  position: absolute;
+  top: 6px;
+  left: calc(100% + 14px);
+  z-index: 2;
+  display: grid;
+  width: max-content;
+  max-width: min(280px, calc(50vw - 92px));
+  padding: 10px 14px;
+  border: 1px solid rgba(169, 200, 255, 0.28);
+  border-radius: 16px 16px 16px 4px;
+  /* Solid, so the tail (which overlaps the corner) does not show a darker patch. */
+  background: #111a2e;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    0 0 24px rgba(77, 139, 255, 0.18);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px) scale(0.96);
+  transform-origin: 0 100%;
+  transition:
+    opacity 220ms ease,
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 200ms ease,
+    border-color 200ms ease;
+}
+.hero-bubble.is-shown {
+  opacity: 1;
+  transform: none;
+}
+.hero-bubble.is-boop {
+  border-color: rgba(169, 200, 255, 0.5);
+  background: #3d7bff;
+}
+/* The tail: a small rotated square tucked under the bubble's corner. */
+.hero-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: 10px;
+  left: -6px;
+  width: 11px;
+  height: 11px;
+  border-bottom: 1px solid rgba(169, 200, 255, 0.28);
+  border-left: 1px solid rgba(169, 200, 255, 0.28);
+  background: inherit;
+  transform: rotate(45deg);
+}
+.hero-bubble-size,
+.hero-bubble-text {
+  grid-area: 1 / 1;
+}
+.hero-bubble-size {
+  visibility: hidden;
+}
+.hero-bubble-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  border-radius: 1px;
+  background: #a9c8ff;
+  animation: hero-caret 1s steps(1) infinite;
+}
+@keyframes hero-caret {
+  50% {
+    opacity: 0;
+  }
+}
+@media (max-width: 639px) {
+  .hero-bubble {
+    top: 0;
+    left: calc(100% + 10px);
+    max-width: calc(50vw - 72px);
+    padding: 8px 11px;
+    font-size: 12.5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-bubble {
+    transform: none;
+    transition: opacity 150ms ease;
+  }
+  .hero-bubble-caret {
+    display: none;
+  }
+}

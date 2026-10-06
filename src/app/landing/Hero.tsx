@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { HeroMascot } from './HeroMascot';
 
 /**
  * The landing hero: an eclipse in the app's own colours. A dark disc sits
@@ -21,6 +22,10 @@ export function Hero() {
       <div aria-hidden className="lp-stars" />
       <div aria-hidden className="lp-ring" />
       <div aria-hidden className="lp-horizon" />
+      {/* The drone hovers inside the eclipse, just above its lit rim, talking. */}
+      <div className="lp-hero-mascot">
+        <HeroMascot />
+      </div>
 
       <div className="lp-cine-content">
         <h1 id="hero-title" className="lp-cine-title">
