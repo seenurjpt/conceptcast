@@ -2644,3 +2644,192 @@ html:has(.lp-page) {
     transition: none;
   }
 }
+
+/* ── brand loader (route and app loading) ────────────────────────────────── */
+/* The welcome animation on a 2.2s loop. Every part runs the same duration,
+   so they stay in step; the whole mark fades at the end of each cycle,
+   which hides the reset. */
+.brand-loader {
+  display: flex;
+  min-height: 55vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--primary);
+  animation: bl-appear 240ms ease-out 160ms both;
+}
+.brand-loader.is-fullscreen {
+  min-height: 100dvh;
+  background: var(--canvas);
+}
+.bl-mark {
+  width: 56px;
+  height: 56px;
+  overflow: visible;
+  animation: bl-cycle 2.2s ease-in-out infinite;
+}
+.is-fullscreen .bl-mark {
+  width: 72px;
+  height: 72px;
+}
+.bl-word {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.bl-link {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  opacity: 0.55;
+}
+.bl-link-1 {
+  animation: bl-draw-1 2.2s ease-in-out infinite;
+}
+.bl-link-2 {
+  animation: bl-draw-2 2.2s ease-in-out infinite;
+}
+.bl-node,
+.bl-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.bl-node {
+  fill: currentColor;
+}
+.bl-node-1 {
+  animation: bl-pop-1 2.2s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+.bl-node-2 {
+  animation: bl-pop-2 2.2s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+.bl-node-3 {
+  animation: bl-land 2.2s ease-out infinite;
+}
+.bl-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.9;
+  animation: bl-ring 2.2s ease-out infinite;
+}
+
+@keyframes bl-appear {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes bl-cycle {
+  0%,
+  84% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes bl-pop-1 {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  12%,
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+}
+@keyframes bl-draw-1 {
+  0%,
+  8% {
+    stroke-dashoffset: 1;
+  }
+  22%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes bl-pop-2 {
+  0%,
+  18% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  30%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
+@keyframes bl-draw-2 {
+  0%,
+  28% {
+    stroke-dashoffset: 1;
+  }
+  42%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes bl-land {
+  0%,
+  40% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  56%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes bl-ring {
+  0%,
+  52% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  58% {
+    transform: scale(1.15);
+    opacity: 0.55;
+  }
+  84%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* Reduced motion: the finished mark, breathing gently. */
+@media (prefers-reduced-motion: reduce) {
+  .bl-link,
+  .bl-node {
+    animation: none;
+  }
+  .bl-link {
+    stroke-dashoffset: 0;
+  }
+  .bl-node-1 {
+    opacity: 0.6;
+  }
+  .bl-node-2 {
+    opacity: 0.8;
+  }
+  .bl-ring {
+    display: none;
+  }
+  .bl-mark {
+    animation: bl-breathe 1.6s ease-in-out infinite;
+  }
+  @keyframes bl-breathe {
+    50% {
+      opacity: 0.45;
+    }
+  }
+}

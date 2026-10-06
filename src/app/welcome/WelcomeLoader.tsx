@@ -49,8 +49,8 @@ export function WelcomeLoader({ next }: { next: string }) {
           <circle className="welcome-node welcome-node-3" cx="19" cy="6" r="4" />
         </svg>
         <p className="welcome-word">conceptcast</p>
-        <p className="welcome-caption">Getting your topics ready</p>
-        <span className="sr-only">Signed in. Opening your topics.</span>
+        <p className="welcome-caption">Getting your dashboard ready</p>
+        <span className="sr-only">Signed in. Opening your dashboard.</span>
       </div>
     </main>
   );

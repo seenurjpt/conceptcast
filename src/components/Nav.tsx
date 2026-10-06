@@ -209,10 +209,13 @@ function AccountMenu() {
   return (
     <div className="relative" ref={ref}>
       <button
-        className="flex items-center gap-2 rounded-[100px] p-1 pr-2 transition-colors hover:bg-surface-strong"
+        className="flex items-center rounded-[100px] p-1 transition-colors hover:bg-surface-strong"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
+        // Just the avatar on the bar; the name is in the menu it opens.
+        aria-label={`Account: ${member.name ?? 'signed in'}`}
+        title={member.name ?? undefined}
       >
         <span className="relative">
           {member.picture && !pictureFailed ? (
@@ -233,9 +236,6 @@ function AccountMenu() {
           {needsAttention && (
             <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-canvas bg-attention" />
           )}
-        </span>
-        <span className="hidden max-w-[120px] truncate text-[14px] font-medium sm:block">
-          {member.name ?? 'Signed in'}
         </span>
       </button>
 
