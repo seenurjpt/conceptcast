@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { getJson, sendJson, fmtRelative, fmtDate, toLocalInput, LINKEDIN_FOLD } from '@/lib/ui';
 import { checkHardConstraints, lengthLimits } from '@/lib/pipeline/constraints';
 import { useSession } from '@/components/SessionProvider';
@@ -39,6 +40,8 @@ function writeWatermarkPref(on: boolean): void {
 }
 
 type Status = 'pending' | 'approved' | 'published' | 'rejected';
+const isStatus = (s: string | null): s is Status =>
+  s === 'pending' || s === 'approved' || s === 'published' || s === 'rejected';
 const ANGLES = ['mechanism', 'misconception', 'tradeoff', 'debug-story'] as const;
 
 interface ConceptLite {
@@ -100,7 +103,13 @@ function draftTitle(d: DraftRow, topicTitle?: string | null): string {
 }
 
 export default function ReviewPage() {
-  const [tab, setTab] = useState<Status>('pending');
+  // ?status= picks the tab and ?draft= the draft (search links to any draft,
+  // whatever its status). Followed on later changes too, so a search from
+  // this page opens its result without a reload.
+  const params = useSearchParams();
+  const wantStatus = params.get('status');
+  const wantDraft = params.get('draft');
+  const [tab, setTab] = useState<Status>(() => (isStatus(wantStatus) ? wantStatus : 'pending'));
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -151,6 +160,11 @@ export default function ReviewPage() {
     void loadList();
     void loadCounts();
   }, [loadList, loadCounts]);
+
+  useEffect(() => {
+    if (isStatus(wantStatus)) setTab(wantStatus);
+    if (wantDraft) setSelectedId(wantDraft);
+  }, [wantStatus, wantDraft]);
 
   useEffect(() => {
     if (selectedId) void loadDetail(selectedId);

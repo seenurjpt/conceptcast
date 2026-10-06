@@ -1399,6 +1399,12 @@ html {
   scrollbar-gutter: stable both-edges;
 }
 
+/* The signed-in app is anchored by its sidebar, not centred, so the gutter
+   is kept on the scrollbar's side only: no empty strip beside the sidebar. */
+html:has(.app-shell) {
+  scrollbar-gutter: stable;
+}
+
 /* Drafts screen, phones and tablets: the approve action pinned to the bottom
    of the screen, since the Publish card sits after the draft there. */
 .review-actionbar {
@@ -1875,4 +1881,766 @@ html:has(.lp-page) {
   .welcome-stage::before { opacity: 1; }
   .welcome-ring { display: none; }
   .welcome-stage { transition: none; }
+}
+
+/* ── app shell and sidebar ───────────────────────────────────────────────── */
+/* The sidebar's width lives in one variable so anything pinned beside it
+   (the drafts action bar) can follow it. The rail only exists from lg up;
+   below that the same nav opens in the top bar's drawer. */
+:root {
+  --sidebar-w: 0px;
+  --sidebar-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+@media (min-width: 1024px) {
+  :root {
+    --sidebar-w: 256px;
+  }
+  :root[data-sidebar='collapsed'] {
+    --sidebar-w: 76px;
+  }
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100dvh;
+}
+.app-column {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.app-sidebar {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .app-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 35;
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    width: var(--sidebar-w);
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--surface-soft);
+    border-right: 1px solid var(--hairline);
+    transition: width 340ms var(--sidebar-ease);
+  }
+  .review-actionbar {
+    left: var(--sidebar-w);
+    transition: left 340ms var(--sidebar-ease);
+  }
+}
+
+/* Head: the logo, and the collapse switch at the right like a panel tab.
+   Collapsed, the switch slides to the centre and shows in place of the logo
+   on hover, so the rail stays one icon wide. */
+.side-head {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 64px;
+  padding-left: 26px;
+}
+.side-brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  transition: opacity 180ms ease;
+}
+.side-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: var(--muted);
+  transition:
+    right 340ms var(--sidebar-ease),
+    opacity 180ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.side-toggle:hover {
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+:root[data-sidebar='collapsed'] .side-toggle {
+  right: 17px;
+  opacity: 0;
+}
+:root[data-sidebar='collapsed'] .side-head:hover .side-toggle,
+:root[data-sidebar='collapsed'] .side-toggle:focus-visible {
+  opacity: 1;
+}
+:root[data-sidebar='collapsed'] .side-head:hover .side-brand,
+:root[data-sidebar='collapsed'] .side-head:has(.side-toggle:focus-visible) .side-brand {
+  opacity: 0;
+}
+
+.side-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  padding: 4px 12px 12px;
+}
+
+/* Labels fade and drift left as the rail narrows; the icons never move,
+   because every row keeps the same left padding at both widths. */
+.side-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition:
+    opacity 200ms ease,
+    transform 340ms var(--sidebar-ease);
+}
+:root[data-sidebar='collapsed'] .app-sidebar .side-label {
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+}
+
+.side-cta {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  margin-bottom: 14px;
+  padding-left: 16px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 14.5px;
+  font-weight: 600;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  transition:
+    filter 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+.side-cta:hover {
+  filter: brightness(1.08);
+  box-shadow:
+    0 6px 16px color-mix(in srgb, var(--primary) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.side-cta:active {
+  transform: scale(0.98);
+}
+
+.side-nav {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -12px;
+  padding: 0 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.side-group + .side-group {
+  margin-top: 14px;
+}
+.side-group li + li,
+.side-foot li + li {
+  margin-top: 2px;
+}
+
+/* Group titles become a short rule on the collapsed rail. */
+.side-group-title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding-left: 16px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.side-group-title span {
+  transition: opacity 200ms ease;
+}
+.side-group-title::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 24px;
+  height: 1px;
+  background: var(--hairline);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+:root[data-sidebar='collapsed'] .app-sidebar .side-group-title span {
+  opacity: 0;
+}
+:root[data-sidebar='collapsed'] .app-sidebar .side-group-title::after {
+  opacity: 1;
+}
+
+.side-link {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 42px;
+  padding: 0 10px 0 16px;
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 14.5px;
+  font-weight: 500;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+.side-link:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface-strong) 75%, transparent);
+}
+.side-link.is-active {
+  color: var(--ink);
+  background: transparent;
+}
+.side-link:focus-visible,
+.side-cta:focus-visible,
+.side-toggle:focus-visible,
+.side-brand:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.side-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  transition:
+    color 150ms ease,
+    transform 200ms var(--sidebar-ease);
+}
+.side-link:hover .side-icon {
+  transform: translateX(1px) scale(1.06);
+}
+.side-link.is-active .side-icon {
+  color: var(--primary);
+}
+
+/* The active row's pill; motion slides it between rows. */
+.side-pill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 12px;
+  background: var(--surface-card);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    inset 0 0 0 1px var(--hairline);
+}
+:root[data-theme='dark'] .side-pill {
+  background: var(--surface-strong);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.side-chevron {
+  display: grid;
+  margin-left: auto;
+  color: var(--muted);
+  animation: side-chevron-in 300ms var(--sidebar-ease);
+  transition: opacity 200ms ease;
+}
+:root[data-sidebar='collapsed'] .app-sidebar .side-chevron {
+  opacity: 0;
+}
+@keyframes side-chevron-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+.side-foot {
+  flex: none;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* The collapsed rail's labels, fixed to the viewport beside the icon. */
+.side-tip {
+  position: fixed;
+  z-index: 60;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--canvas);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  transform: translateY(-50%);
+  animation: side-tip-in 140ms ease-out;
+}
+@keyframes side-tip-in {
+  from {
+    opacity: 0;
+    transform: translate(-4px, -50%);
+  }
+}
+
+.theme-toggle-icon {
+  display: grid;
+  animation: theme-icon-in 380ms var(--sidebar-ease);
+}
+@keyframes theme-icon-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar,
+  .review-actionbar,
+  .side-toggle,
+  .side-label,
+  .side-icon,
+  .side-group-title span,
+  .side-group-title::after,
+  .side-chevron {
+    transition: none;
+  }
+  .side-chevron,
+  .side-tip,
+  .theme-toggle-icon {
+    animation: none;
+  }
+  .side-link:hover .side-icon {
+    transform: none;
+  }
+}
+
+/* ── global search (command palette) ─────────────────────────────────────── */
+
+/* Top bar trigger: a search field look-alike from sm up, an icon below. */
+.cp-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 100px;
+  color: var(--muted);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+.cp-trigger:hover {
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+.cp-trigger-text,
+.cp-trigger-kbd {
+  display: none;
+}
+@media (min-width: 640px) {
+  .cp-trigger {
+    justify-content: flex-start;
+    width: 220px;
+    height: 38px;
+    padding: 0 6px 0 12px;
+    border: 1px solid var(--hairline);
+    background: var(--surface-soft);
+  }
+  .cp-trigger:hover {
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--hairline));
+    background: var(--surface-soft);
+  }
+  .cp-trigger-text {
+    display: inline;
+    flex: 1;
+    text-align: left;
+    font-size: 14px;
+  }
+  .cp-trigger-kbd {
+    display: inline-flex;
+  }
+}
+@media (min-width: 1024px) {
+  .cp-trigger {
+    width: 280px;
+  }
+}
+.cp-trigger-kbd,
+.cp-foot kbd {
+  align-items: center;
+  gap: 2px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+.cp-trigger:focus-visible,
+.cp-esc:focus-visible,
+.cp-clear:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.cp-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+:root[data-theme='dark'] .cp-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.cp-panel {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: min(640px, calc(100% - 24px));
+  margin-left: max(-320px, calc(-50% + 12px));
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--surface-card);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+  transform-origin: 50% 0;
+}
+@media (min-width: 640px) {
+  .cp-panel {
+    top: 12vh;
+  }
+}
+
+.cp-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 60px;
+  padding: 0 12px 0 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+.cp-field-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+}
+.cp-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  /* 16px stops iOS zooming the page on focus. */
+  font-size: 16px;
+  outline: none;
+}
+.cp-input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.cp-clear {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 100px;
+  color: var(--muted);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.cp-clear:hover {
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+.cp-esc {
+  flex: none;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.cp-esc:hover {
+  color: var(--ink);
+}
+
+.cp-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--hairline);
+  border-top-color: var(--primary);
+  border-radius: 100px;
+  animation: cp-spin 700ms linear infinite;
+}
+@keyframes cp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cp-list {
+  max-height: min(460px, calc(100dvh - 160px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px 8px 8px;
+  transition: opacity 150ms ease;
+}
+.cp-list.is-stale {
+  opacity: 0.6;
+}
+.cp-group + .cp-group {
+  margin-top: 6px;
+}
+.cp-group-label {
+  padding: 10px 10px 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  scroll-margin: 8px;
+}
+.cp-row.is-active {
+  background: var(--surface-strong);
+}
+.cp-row-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  transition:
+    color 120ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+.cp-row.is-active .cp-row-icon {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-card));
+  color: var(--primary);
+}
+.cp-row-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.cp-row-title {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cp-row-sub {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cp-row-context {
+  display: none;
+  flex: none;
+  max-width: 140px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (min-width: 640px) {
+  .cp-row-context {
+    display: block;
+  }
+}
+.cp-status {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.cp-row.is-active .cp-status {
+  background: var(--surface-card);
+}
+.cp-status.is-pending {
+  color: var(--attention);
+}
+.cp-status.is-approved,
+.cp-status.is-published,
+.cp-status.is-covered {
+  color: var(--up);
+}
+.cp-status.is-rejected {
+  color: var(--down);
+}
+.cp-row-enter {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--muted);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    opacity 120ms ease,
+    transform 160ms ease;
+}
+.cp-row.is-active .cp-row-enter {
+  opacity: 1;
+  transform: none;
+}
+
+.cp-mark {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: inherit;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.cp-skeleton {
+  display: grid;
+  gap: 6px;
+  padding: 6px 2px;
+}
+.cp-skeleton span {
+  height: 48px;
+  border-radius: 10px;
+  background: var(--surface-strong);
+  animation: cp-pulse 1.2s ease-in-out infinite;
+}
+.cp-skeleton span:nth-child(2) {
+  animation-delay: 120ms;
+}
+.cp-skeleton span:nth-child(3) {
+  animation-delay: 240ms;
+}
+@keyframes cp-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.cp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 16px 30px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+.cp-empty strong {
+  color: var(--ink);
+  font-weight: 600;
+  word-break: break-word;
+}
+.cp-empty-hint {
+  font-size: 12.5px;
+}
+
+.cp-foot {
+  display: none;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--hairline);
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+.cp-foot > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cp-foot kbd {
+  display: inline-flex;
+  min-width: 22px;
+  justify-content: center;
+}
+.cp-foot-wide {
+  display: none !important;
+}
+/* Key hints only where there is a keyboard. */
+@media (hover: hover) and (pointer: fine) {
+  .cp-foot {
+    display: flex;
+  }
+}
+@media (min-width: 720px) {
+  .cp-foot-wide {
+    display: inline-flex !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-spinner,
+  .cp-skeleton span {
+    animation: none;
+  }
+  .cp-row-enter,
+  .cp-list {
+    transition: none;
+  }
 }

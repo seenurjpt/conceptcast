@@ -198,6 +198,14 @@ export const exemplars = {
   async list(): Promise<ExemplarDoc[]> {
     return (await col<ExemplarDoc>(COLLECTIONS.exemplars)).find({}).sort({ archetypeSlug: 1, createdAt: -1 }).toArray();
   },
+  /** Newest first, matching the post text or the author's handle. */
+  async search(pattern: RegExp, limit: number): Promise<ExemplarDoc[]> {
+    return (await col<ExemplarDoc>(COLLECTIONS.exemplars))
+      .find({ $or: [{ rawText: pattern }, { authorHandle: pattern }] } as Filter<ExemplarDoc>)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .toArray();
+  },
   async countByArchetype(): Promise<Record<string, number>> {
     const rows = await (await col<ExemplarDoc>(COLLECTIONS.exemplars))
       .aggregate<{ _id: string; n: number }>([{ $group: { _id: '$archetypeSlug', n: { $sum: 1 } } }])

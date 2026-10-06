@@ -25,7 +25,7 @@ export type TopicSummary = TopicDoc & { counts: TopicCounts; mine: boolean };
 const emptyCounts = (): TopicCounts => ({ backlog: 0, selected: 0, published: 0, retired: 0, total: 0 });
 
 /** A topic is visible if it is shared (migrated from a track) or yours. */
-function visibleTo(userId: string) {
+export function visibleTo(userId: string) {
   return { archived: false, $or: [{ ownerUserId: null }, { ownerUserId: userId }] };
 }
 

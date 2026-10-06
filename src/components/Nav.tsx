@@ -4,24 +4,23 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Cancel01Icon, Menu01Icon, Moon02Icon, Sun03Icon } from '@hugeicons/core-free-icons';
 import { useSession } from './SessionProvider';
 import { LogoMark } from './Logo';
 import { useDialog } from './Modal';
+import { SidebarNav } from './Sidebar';
+import { SearchTrigger } from './CommandPalette';
 import { fmtDay } from '@/lib/ui';
 import { lockPage } from '@/lib/pageLock';
 
-/** Ordered by the actual flow: pick a topic, review the draft, see what shipped. */
-const LINKS = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/backlog', label: 'Topics' },
-  { href: '/review', label: 'Drafts' },
-  { href: '/calendar', label: 'Published' },
-  { href: '/voice', label: 'Voice' },
-  { href: '/analytics', label: 'Analytics' },
-  { href: '/admin/exemplars', label: 'Exemplars' },
-  { href: '/settings', label: 'Settings' },
-];
-
+/**
+ * The top bar: the theme switch and the account menu. Each page names
+ * itself in its own heading, so the bar does not repeat it.
+ * Navigation lives in the sidebar; below lg the bar's menu button opens the
+ * same nav in a drawer.
+ */
 export function Nav() {
   const path = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -34,58 +33,39 @@ export function Nav() {
       {/* Outside the sticky header on purpose: a fixed child of a sticky
           ancestor is positioned against that ancestor, not the viewport, so
           the drawer collapsed to the header's own height. */}
-      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} path={path} />
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-    <header className="sticky top-0 z-30 border-b border-hairline bg-canvas/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-4 sm:px-5 lg:gap-6">
-        <button
-          className="-ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink lg:hidden"
-          onClick={() => setMenuOpen(true)}
-          aria-label="Open menu"
-          aria-expanded={menuOpen}
-          aria-controls="mobile-menu"
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-            <path d="M3 5.5h14M3 10h14M3 14.5h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-        </button>
+      <header className="sticky top-0 z-30 border-b border-hairline bg-canvas/90 backdrop-blur">
+        <div className="flex h-16 items-center gap-3 px-4 sm:px-5 lg:px-8">
+          <button
+            className="-ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink lg:hidden"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+          >
+            <HugeiconsIcon icon={Menu01Icon} size={22} strokeWidth={1.8} />
+          </button>
 
-        <Link href="/dashboard" className="flex shrink-0 items-center gap-2" aria-label="conceptcast home">
-          <LogoMark className="h-6 w-6 text-primary" />
-          <span className="t-title-sm tracking-[-0.02em]">conceptcast</span>
-        </Link>
+          <Link href="/dashboard" className="flex shrink-0 items-center gap-2 lg:hidden" aria-label="conceptcast home">
+            <LogoMark className="h-6 w-6 text-primary" />
+            <span className="t-title-sm hidden tracking-[-0.02em] min-[400px]:inline">conceptcast</span>
+          </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center gap-1 lg:flex">
-          {LINKS.map((l) => {
-            const active = path === l.href || path.startsWith(l.href + '/');
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                aria-current={active ? 'page' : undefined}
-                className={`rounded-[100px] px-3 py-1.5 text-[14px] font-medium transition-colors ${
-                  active ? 'bg-surface-strong text-ink' : 'text-muted hover:text-ink'
-                }`}
-              >
-                {l.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle />
-          <AccountMenu />
+          <div className="ml-auto flex min-w-0 items-center gap-2">
+            <SearchTrigger />
+            <ThemeToggle />
+            <AccountMenu />
+          </div>
         </div>
-      </div>
-
-    </header>
+      </header>
     </>
   );
 }
 
-function MobileMenu({ open, onClose, path }: { open: boolean; onClose: () => void; path: string }) {
+function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     if (!open) return;
@@ -95,59 +75,57 @@ function MobileMenu({ open, onClose, path }: { open: boolean; onClose: () => voi
     document.addEventListener('keydown', onKey);
     // The page behind must not scroll, and its edge strips dim with it.
     const unlock = lockPage();
-    panelRef.current?.querySelector<HTMLElement>('a')?.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
       unlock();
     };
   }, [open, onClose]);
 
-  if (!open) return null;
-
   return (
-    // z-40 clears the sticky header's z-30 so the drawer covers it.
-    <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
-      <div
-        ref={panelRef}
-        id="mobile-menu"
-        className="absolute inset-y-0 left-0 flex w-[min(17rem,82vw)] flex-col border-r border-hairline bg-surface-card shadow-[0_0_40px_rgba(0,0,0,0.35)]"
-      >
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-hairline px-4">
-          <span className="flex items-center gap-2">
-            <LogoMark className="h-6 w-6 text-primary" />
-            <span className="t-title-sm tracking-[-0.02em]">conceptcast</span>
-          </span>
-          <button
-            className="flex h-10 w-10 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink"
+    <AnimatePresence>
+      {open && (
+        // z-40 clears the sticky header's z-30 so the drawer covers it.
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <motion.div
+            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
             onClick={onClose}
-            aria-label="Close menu"
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reduce ? 0 : 0.2 }}
+          />
+          <motion.div
+            ref={panelRef}
+            id="mobile-menu"
+            className="drawer-panel absolute inset-y-0 left-0 flex w-[min(18rem,84vw)] flex-col border-r border-hairline bg-surface-soft shadow-[0_0_40px_rgba(0,0,0,0.35)]"
+            initial={{ x: reduce ? 0 : '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: reduce ? 0 : '-100%' }}
+            transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 40 }}
+            onAnimationComplete={() => {
+              // Focus once the panel has arrived, so the ring does not ride in.
+              if (open) panelRef.current?.querySelector<HTMLElement>('.side-link[aria-current], .side-link')?.focus();
+            }}
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-              <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-
-        <nav className="scroll-slim flex-1 overflow-y-auto p-2">
-          {LINKS.map((l) => {
-            const active = path === l.href || path.startsWith(l.href + '/');
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                aria-current={active ? 'page' : undefined}
-                className={`flex items-center rounded-[12px] px-3 py-3 text-[15px] font-medium transition-colors ${
-                  active ? 'bg-surface-strong text-ink' : 'text-muted hover:text-ink'
-                }`}
+            <div className="flex h-16 shrink-0 items-center justify-between px-4">
+              <span className="flex items-center gap-2 pl-[10px]">
+                <LogoMark className="h-6 w-6 text-primary" />
+                <span className="t-title-sm tracking-[-0.02em]">conceptcast</span>
+              </span>
+              <button
+                className="flex h-10 w-10 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink"
+                onClick={onClose}
+                aria-label="Close menu"
               >
-                {l.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-    </div>
+                <HugeiconsIcon icon={Cancel01Icon} size={20} strokeWidth={1.8} />
+              </button>
+            </div>
+            <SidebarNav id="drawer" />
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -158,14 +136,20 @@ function ThemeToggle() {
     const stored = localStorage.getItem('theme');
     const isDark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
     setDark(isDark);
-    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+    const root = document.documentElement;
+    root.dataset.theme = isDark ? 'dark' : 'light';
+    // The search palette can switch the theme too; follow it.
+    const mo = new MutationObserver(() => setDark(root.dataset.theme === 'dark'));
+    mo.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => mo.disconnect();
   }, []);
 
   if (dark === null) return <span className="h-9 w-9" />;
   return (
     <button
-      className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink"
+      className="theme-toggle flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-strong hover:text-ink"
       aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+      title={dark ? 'Light theme' : 'Dark theme'}
       onClick={() => {
         const next = !dark;
         setDark(next);
@@ -173,7 +157,9 @@ function ThemeToggle() {
         localStorage.setItem('theme', next ? 'dark' : 'light');
       }}
     >
-      {dark ? '☾' : '☀'}
+      <span key={dark ? 'moon' : 'sun'} className="theme-toggle-icon">
+        <HugeiconsIcon icon={dark ? Moon02Icon : Sun03Icon} size={19} strokeWidth={1.8} />
+      </span>
     </button>
   );
 }

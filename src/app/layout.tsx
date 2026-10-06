@@ -35,8 +35,9 @@ export const viewport: Viewport = {
 /**
  * Applies the stored theme before first paint so there is no flash. With no
  * stored choice the landing page starts dark; the app follows the system.
+ * The app sidebar's collapsed state is applied the same way.
  */
-const THEME_SCRIPT = `try{var t=localStorage.getItem('theme')||(location.pathname==='/'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));document.documentElement.dataset.theme=t}catch(e){}`;
+const THEME_SCRIPT = `try{var d=document.documentElement;var t=localStorage.getItem('theme')||(location.pathname==='/'?'dark':(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));d.dataset.theme=t;d.dataset.sidebar=localStorage.getItem('sidebar')==='collapsed'?'collapsed':'expanded'}catch(e){}`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
