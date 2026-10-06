@@ -22,10 +22,10 @@ export function Hero() {
       <div aria-hidden className="lp-stars" />
       <div aria-hidden className="lp-ring" />
       <div aria-hidden className="lp-horizon" />
-      {/* The drone hovers inside the eclipse, just above its lit rim, talking. */}
-      <div className="lp-hero-mascot">
-        <HeroMascot />
-      </div>
+      {/* Marks where the rim is, so the drone can measure the room it has. */}
+      <div aria-hidden className="lp-rim-probe" />
+      {/* The drone hovers inside the eclipse, between the nav and the lit rim, talking. */}
+      <HeroMascot />
 
       <div className="lp-cine-content">
         <h1 id="hero-title" className="lp-cine-title">

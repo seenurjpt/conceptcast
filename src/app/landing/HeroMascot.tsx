@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { LandingMascot } from './LandingMascot';
 
 /**
@@ -13,6 +13,12 @@ import { LandingMascot } from './LandingMascot';
  * hidden from screen readers rather than announcing every few seconds. It
  * pauses while the hero is off screen or the tab is hidden, and with
  * reduced motion each line appears whole instead of being typed.
+ *
+ * Placement is measured, not fixed, so it works on every screen: the drone
+ * sits centred in the gap between the floating nav and the eclipse's rim,
+ * at its full size where the gap allows and smaller where it does not (a
+ * short phone with its browser bars showing). Re-measured on resize and
+ * rotation.
  */
 
 const LINES = [
@@ -35,6 +41,33 @@ const BOOP_HOLD_MS = 1800;
 const DIZZY_AFTER = 4;
 const DIZZY_WINDOW_MS = 1600;
 
+/** Full size: phones, then wider screens. */
+const SIZE_SMALL = 96;
+const SIZE = 128;
+/** Never smaller than this, however tight the gap. */
+const SIZE_MIN = 56;
+/** The thruster glow hangs this far below the drone. */
+const GLOW = 16;
+/** Kept clear above (under the nav) and below (over the rim). */
+const MARGIN = 8;
+
+type Layout = { top: number; size: number };
+
+/** Where the drone fits between the nav and the rim, in px from the hero's top. */
+function measure(section: HTMLElement): Layout | null {
+  const probe = section.querySelector<HTMLElement>('.lp-rim-probe');
+  if (!probe) return null;
+  // The rim, resolved from the CSS variable by a zero-height marker placed at it.
+  const rim = probe.offsetTop;
+  // The nav is fixed; its bottom is the same whatever the scroll.
+  const nav = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
+  const gap = rim - nav - MARGIN * 2 - GLOW;
+  const full = window.innerWidth < 640 ? SIZE_SMALL : SIZE;
+  const size = Math.max(SIZE_MIN, Math.min(full, Math.floor(gap)));
+  const top = Math.round(nav + MARGIN + Math.max(0, (gap - size) / 2));
+  return { top, size };
+}
+
 export function HeroMascot() {
   const [ready, setReady] = useState(false);
   const [text, setText] = useState('');
@@ -49,6 +82,20 @@ export function HeroMascot() {
   const active = useRef(true);
   const reduce = useRef(false);
   const wrap = useRef<HTMLDivElement>(null);
+  const [layout, setLayout] = useState<Layout | null>(null);
+
+  useLayoutEffect(() => {
+    const section = wrap.current?.closest<HTMLElement>('.lp-cine');
+    if (!section) return;
+    const update = () => setLayout(measure(section));
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, []);
 
   const clear = () => {
     timers.current.forEach(window.clearTimeout);
@@ -139,14 +186,29 @@ export function HeroMascot() {
   };
 
   return (
-    <div ref={wrap} className="hero-mascot">
-      <LandingMascot load="idle" size={128} sizeSmall={96} className="is-hero" onReady={() => setReady(true)} onBoop={onBoop} />
-      <div className={`hero-bubble${shown && text ? ' is-shown' : ''}${tone === 'boop' ? ' is-boop' : ''}`} aria-hidden>
-        <span className="hero-bubble-size">{full}</span>
-        <span className="hero-bubble-text">
-          {text}
-          <span className="hero-bubble-caret" />
-        </span>
+    <div
+      ref={wrap}
+      className="lp-hero-mascot"
+      style={{ top: layout?.top ?? 0, visibility: layout ? undefined : 'hidden', ['--m-size' as string]: `${layout?.size ?? SIZE}px` }}
+    >
+      <div className="hero-mascot">
+        {layout && (
+          <LandingMascot
+            load="idle"
+            size={layout.size}
+            sizeSmall={layout.size}
+            className="is-hero"
+            onReady={() => setReady(true)}
+            onBoop={onBoop}
+          />
+        )}
+        <div className={`hero-bubble${shown && text ? ' is-shown' : ''}${tone === 'boop' ? ' is-boop' : ''}`} aria-hidden>
+          <span className="hero-bubble-size">{full}</span>
+          <span className="hero-bubble-text">
+            {text}
+            <span className="hero-bubble-caret" />
+          </span>
+        </div>
       </div>
     </div>
   );
