@@ -258,7 +258,7 @@ export interface DraftDoc {
   /** Null only for announcements, which get the machine checks but no critic. */
   critique: DraftCritique | null;
   /** What the author typed for an announcement, so "Write it again" keeps it. */
-  announce: { why: string | null; cadence: string | null } | null;
+  announce: { why: string | null; goal?: string | null; cadence: string | null } | null;
   version: number;
   status: DraftStatus;
   editedByHuman: boolean;
@@ -293,7 +293,7 @@ const DraftSchema = new Schema<DraftDoc>({
   },
   announce: {
     type: new Schema(
-      { why: { type: String, default: null }, cadence: { type: String, default: null } },
+      { why: { type: String, default: null }, goal: { type: String, default: null }, cadence: { type: String, default: null } },
       { _id: false },
     ),
     default: null,

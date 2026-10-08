@@ -65,11 +65,12 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Everything except Next internals, static files (including the landing
-  // page's demo video), and the icon/manifest
+  // Everything except Next internals, Vercel's own endpoints (/_vercel, where
+  // Web Analytics reports page views, signed in or not), static files
+  // (including the landing page's demo video), and the icon/manifest
   // endpoints: browsers request those without credentials, so gating them
   // just means a tab with no favicon.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.svg|apple-icon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|mp4|webm)$).*)',
+    '/((?!_next/static|_next/image|_vercel|favicon.ico|manifest.webmanifest|icon.svg|apple-icon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|mp4|webm)$).*)',
   ],
 };

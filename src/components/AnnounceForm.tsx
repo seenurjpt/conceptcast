@@ -7,7 +7,7 @@ import { Card, Notice } from '@/components/ui';
 
 /**
  * The two optional inputs for an "I'm starting to learn this" post. Both can
- * be left blank; the post then names the topic and what is coming, and
+ * be left blank; the post then names the topic, lists no study plan, and
  * promises no posting rhythm.
  */
 export function AnnounceForm({
@@ -24,6 +24,7 @@ export function AnnounceForm({
 }) {
   const router = useRouter();
   const [why, setWhy] = useState('');
+  const [goal, setGoal] = useState('');
   const [cadence, setCadence] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +40,7 @@ export function AnnounceForm({
           try {
             const r = await sendJson<{ draftId: string }>(`/api/topics/${topicId}/announce`, 'POST', {
               why: why.trim() || undefined,
+              goal: goal.trim() || undefined,
               cadence: cadence.trim() || undefined,
             });
             router.push(`/review?draft=${r.draftId}`);
@@ -49,8 +51,9 @@ export function AnnounceForm({
         }}
       >
         <p className="t-body-sm text-body">
-          A short post telling your network you are learning this in public. It names a few of your subtopics as what is
-          coming and ends with a question. It lands in Drafts for you to edit before anything is posted.
+          A short post telling your network you are learning this in public, ending with a question that invites their
+          advice. It promises no study plan, so you can learn in any order. It lands in Drafts for you to edit before
+          anything is posted.
         </p>
         <div>
           <label className="label" htmlFor="announce-why">
@@ -65,6 +68,20 @@ export function AnnounceForm({
             placeholder="Our service fell over at 10x traffic and I could not explain why."
           />
           <p className="t-caption mt-1.5 text-muted">The most interesting line of the post, if you have one. Nothing is made up if you leave it blank.</p>
+        </div>
+        <div>
+          <label className="label" htmlFor="announce-goal">
+            What you want to be able to do (optional)
+          </label>
+          <input
+            id="announce-goal"
+            className="input w-full"
+            value={goal}
+            maxLength={200}
+            onChange={(e) => setGoal(e.target.value)}
+            placeholder="Design a backend that survives a 10x traffic spike"
+          />
+          <p className="t-caption mt-1.5 text-muted">A concrete goal makes the post specific. Leave it blank and none is invented.</p>
         </div>
         <div>
           <label className="label" htmlFor="announce-cadence">

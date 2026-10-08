@@ -23,9 +23,12 @@ const EMOJI =
 export const MIN_CHARS = 600;
 export const MAX_CHARS = 1_000;
 
-/** "I'm starting to learn X" posts: short, a few more hashtags allowed. */
-export const ANNOUNCEMENT_MIN_CHARS = 300;
-export const ANNOUNCEMENT_MAX_CHARS = 900;
+/**
+ * "I'm starting to learn X" posts: a few short lines plus hashtags (the
+ * writer aims for a 200-500 character body), a few more hashtags allowed.
+ */
+export const ANNOUNCEMENT_MIN_CHARS = 200;
+export const ANNOUNCEMENT_MAX_CHARS = 700;
 export const ANNOUNCEMENT_MAX_HASHTAGS = 5;
 
 /**
@@ -130,6 +133,14 @@ export function checkHardConstraints(
   if (kind === 'announcement') {
     const lastText = [...nonEmpty].reverse().find((l) => !/^\s*(#[A-Za-z][A-Za-z0-9_]*\s*)+$/.test(l)) ?? '';
     if (!/\?\s*$/.test(lastText)) violations.push('ending: the last line before the hashtags must be a question ending in "?"');
+    // One question lands; two in a row read as a survey.
+    const questions = (body.replace(/#[A-Za-z][A-Za-z0-9_]*/g, '').match(/\?/g) ?? []).length;
+    if (questions > 1) violations.push(`ending: ask exactly one question (found ${questions})`);
+    // No syllabus: people learn in whatever order they choose, so an
+    // announcement lists nothing (arrows, bullets, dashes or numbered lines).
+    if (nonEmpty.some((l) => /^\s*(→|•|[-*]\s|\d+[.)]\s)/.test(l))) {
+      violations.push('list: an announcement should not list what you will study');
+    }
   }
 
   const lower = body.toLowerCase();

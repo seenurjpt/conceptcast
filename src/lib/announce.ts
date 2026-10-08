@@ -7,7 +7,7 @@ import { z } from 'zod';
 import type { Types } from 'mongoose';
 import { callJson, MODELS, type SystemBlock } from './anthropic';
 import { loadPrompt } from './loadPrompt';
-import { Concept, Draft, type ConceptDoc, type DraftDoc, type TopicDoc } from './db/models';
+import { Draft, type DraftDoc, type TopicDoc } from './db/models';
 import { setUsageConcept } from './db/usageSink';
 import { checkHardConstraints, ANNOUNCEMENT_MAX_HASHTAGS } from './pipeline/constraints';
 import { extractHook } from './pipeline/generate';
@@ -21,12 +21,12 @@ export const AnnouncementOutputSchema = z.object({
 export interface AnnouncementOptions {
   /** Why the author is starting, in their words. The most interesting line of the post. */
   why?: string;
+  /** What they want to be able to do ("fix a failing deploy without asking anyone"). The most quotable line. */
+  goal?: string;
   /** e.g. "twice a week". Only mentioned when given. */
   cadence?: string;
 }
 
-/** How many subtopic titles the model sees; it names 3 or 4 of them. */
-const SUBTOPICS_SHOWN = 6;
 
 /** `#Foo` and `Foo` both become `Foo`; spaces and symbols removed; deduped; at most 5. */
 export function normalizeHashtags(tags: string[]): string[] {
@@ -45,16 +45,23 @@ export function assembleAnnouncement(body: string, hashtags: string[]): string {
 }
 
 /** The user message: the topic, what is coming, and only the extras the author supplied. */
-export function announcementPrompt(
-  topic: Pick<TopicDoc, 'title' | 'description'>,
-  subtopicTitles: string[],
-  opts: AnnouncementOptions = {},
-): string {
-  const parts = [`# Topic\n\n${topic.title}${topic.description ? `\n\n${topic.description}` : ''}`];
-  parts.push(
-    `# What I plan to cover (pick 3 or 4)\n\n${subtopicTitles.length ? subtopicTitles.map((t) => `- ${t}`).join('\n') : '(no subtopics yet: describe the topic in general terms, do not invent a syllabus)'}`,
-  );
+/**
+ * The user message: the topic, and only the extras the author supplied.
+ *
+ * Subtopics are deliberately not sent. People learn in whatever order they
+ * choose, so a list of "what is coming" promises a syllabus they may not
+ * follow, and trials showed the model mining those titles for invented
+ * claims ("I can read about consistent hashing all day...").
+ */
+export function announcementPrompt(topic: Pick<TopicDoc, 'title' | 'description'>, opts: AnnouncementOptions = {}): string {
+  const parts = [`# Topic\n\n${topic.title}`];
+  if (topic.description?.trim()) {
+    parts.push(`# What the topic covers (context only: do not list it, quote it or name concepts from it)\n\n${topic.description.trim()}`);
+  }
   if (opts.why?.trim()) parts.push(`# Why I am starting\n\n${opts.why.trim()}`);
+  else parts.push('# Why I am starting\n\n(not given: invent no reason, say nothing about my background, and make the hook about the topic)');
+  if (opts.goal?.trim()) parts.push(`# What I want to be able to do\n\n${opts.goal.trim()}`);
+  else parts.push('# What I want to be able to do\n\n(not given: state no goal)');
   if (opts.cadence?.trim()) parts.push(`# How often I will post\n\n${opts.cadence.trim()}`);
   else parts.push('# How often I will post\n\n(not given: do not promise a rhythm)');
   return parts.join('\n\n');
@@ -92,16 +99,8 @@ export async function writeAnnouncement(
   opts: AnnouncementOptions = {},
   log: (m: string) => void = () => {},
 ): Promise<AnnouncementResult> {
-  const subtopics = await Concept.find(
-    { topicId: topic._id, status: { $in: ['backlog', 'selected', 'published'] } },
-    { title: 1 },
-  )
-    .sort({ createdAt: 1 })
-    .limit(SUBTOPICS_SHOWN)
-    .lean<Pick<ConceptDoc, 'title'>[]>();
-
   const system = announcementSystem((await loadVoiceContext()).styleGuide);
-  const userMessage = announcementPrompt(topic, subtopics.map((s) => s.title), opts);
+  const userMessage = announcementPrompt(topic, opts);
 
   setUsageConcept(`announce:${topic.slug}`);
   try {
@@ -153,7 +152,7 @@ export async function writeAnnouncement(
       charCount: body.length,
       hashtags: normalizeHashtags(out.hashtags).map((h) => `#${h}`),
       critique: null,
-      announce: { why: opts.why?.trim() || null, cadence: opts.cadence?.trim() || null },
+      announce: { why: opts.why?.trim() || null, goal: opts.goal?.trim() || null, cadence: opts.cadence?.trim() || null },
       version,
       status: 'pending',
     });

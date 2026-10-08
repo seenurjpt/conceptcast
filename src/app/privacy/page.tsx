@@ -60,7 +60,7 @@ export default function PrivacyPage() {
                 <li>We collect what is needed to write and publish your posts: your LinkedIn sign-in, what you write, and the AI keys you add.</li>
                 <li>Nothing is posted to LinkedIn unless you approve it.</li>
                 <li>Your content is sent to the AI provider whose key you added, to research and write. That provider bills you directly.</li>
-                <li>No analytics, no advertising, no tracking cookies, and we never sell your data.</li>
+                <li>No advertising and no tracking cookies, and we never sell your data. Page visits are counted with cookieless analytics that does not identify you.</li>
                 <li>Your AI keys are encrypted. You can remove them, and sign out, at any time.</li>
               </ul>
             </div>
@@ -123,6 +123,14 @@ export default function PrivacyPage() {
                     <td>LinkedIn where available, or numbers you enter</td>
                   </tr>
                   <tr>
+                    <td>Page visits</td>
+                    <td>
+                      Which pages are viewed, the site that linked to them, and the browser, operating system, device type
+                      and country. Counted without cookies, and without identifying who you are.
+                    </td>
+                    <td>Vercel Web Analytics, on every page</td>
+                  </tr>
+                  <tr>
                     <td>Usage records</td>
                     <td>
                       For each AI request: which step it was for, the provider and model, token counts, estimated cost,
@@ -138,7 +146,7 @@ export default function PrivacyPage() {
             <section id="not-collect">
               <h2>3. What we do not collect</h2>
               <ul>
-                <li>No analytics, advertising or tracking scripts, and no third-party cookies.</li>
+                <li>No advertising, no cross-site tracking, and no third-party cookies.</li>
                 <li>The app does not store your IP address, device or browser details, or location.</li>
                 <li>It does not read your LinkedIn feed, connections or messages. At most, it reads the reaction and comment counts on posts it published for you.</li>
                 <li>Fonts are served from this site, so loading a page does not contact a font service.</li>
@@ -157,6 +165,7 @@ export default function PrivacyPage() {
                 <li>To publish the posts you approve, at the time you choose, and to refresh LinkedIn access so scheduled posts still go out.</li>
                 <li>To show how your published posts perform, and to favour the angles that work for you.</li>
                 <li>To show your AI spending, and to find and fix problems.</li>
+                <li>To see which pages people visit, so the site can be improved.</li>
               </ul>
               <p>We do not use your content to train AI models, and we do not sell or rent your data to anyone.</p>
             </section>
@@ -188,6 +197,13 @@ export default function PrivacyPage() {
                 work (publishing, token refresh, news scans) through Inngest. These services process data only to run
                 the app. Scheduled jobs carry identifiers such as your LinkedIn member ID and post IDs, not your content.
               </p>
+              <h3>Vercel Web Analytics</h3>
+              <p>
+                Page visits are counted with Vercel Web Analytics. It sets no cookies and stores no IP address: a visitor
+                is recognised only within a single day, by a temporary value that cannot be traced back to them. It sees
+                the page address, the referring site, and browser, device and country details, and reports them only as
+                totals. It does not see anything you write in the app.
+              </p>
               <h3>Nobody else</h3>
               <p>
                 We share data with no one else, except where the law requires it. If the project ever changes hands, this
@@ -197,7 +213,7 @@ export default function PrivacyPage() {
 
             <section id="cookies">
               <h2>6. Cookies and local storage</h2>
-              <p>The app uses a few strictly necessary cookies, and your browser&rsquo;s local storage for preferences. None of them track you.</p>
+              <p>The app uses a few strictly necessary cookies, and your browser&rsquo;s local storage for preferences. None of them track you, and page-visit counting uses no cookies at all.</p>
               <table className="legal-table">
                 <thead>
                   <tr>

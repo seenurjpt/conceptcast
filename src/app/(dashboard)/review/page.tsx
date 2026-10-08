@@ -75,7 +75,7 @@ interface DraftRow {
   /** Null for announcements: they get the machine checks but no critic. */
   critique: { score: number; issues: string[]; strengths: string[]; depthPassed: boolean; revisionOf: string | null } | null;
   /** What the author typed for an announcement; reused by "Write it again". */
-  announce?: { why: string | null; cadence: string | null } | null;
+  announce?: { why: string | null; goal?: string | null; cadence: string | null } | null;
   concept: ConceptLite | null;
   topic?: { _id: string; title: string } | null;
   publication: { _id: string; status: string; scheduledFor: string; postUrn: string | null; error: string | null } | null;
@@ -732,6 +732,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                         run(async () => {
                           const r = await sendJson<{ draftId: string }>(`/api/topics/${topic?._id}/announce`, 'POST', {
                             why: draft.announce?.why ?? undefined,
+                            goal: draft.announce?.goal ?? undefined,
                             cadence: draft.announce?.cadence ?? undefined,
                           });
                           return { message: 'Rewritten. Here is the new version.', select: r.draftId };

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { Analytics } from '@vercel/analytics/next';
 import { DialogProvider } from '@/components/Modal';
 import { SITE_AUTHOR, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 
@@ -49,6 +50,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {/* The landing and login screens have no nav or session, so that chrome
             lives in the (dashboard) group. */}
         <DialogProvider>{children}</DialogProvider>
+        {/* Vercel Web Analytics: cookieless page-view counts. It only reports
+            from a Vercel deployment; locally it stays in debug mode. Covered
+            in the privacy policy (/privacy), so update that if this changes. */}
+        <Analytics />
       </body>
     </html>
   );
