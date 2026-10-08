@@ -25,6 +25,8 @@ export interface DraftRunResult {
   draftId: string;
   researchId: string;
   angle: Angle;
+  /** The term the post opens with. */
+  term: string | null;
   body: string;
   score: number;
   autoFails: string[];
@@ -71,6 +73,8 @@ interface DraftSaveInput {
   concept: ConceptDoc;
   researchId: Types.ObjectId;
   angle: Angle;
+  /** The term the post opens with; saved so later edits are checked against it. */
+  term: string | null;
   body: string;
   score: number;
   autoFails: string[];
@@ -87,6 +91,7 @@ async function saveDraft(d: DraftSaveInput): Promise<Types.ObjectId> {
     conceptId: d.concept._id,
     researchId: d.researchId,
     angle: d.angle,
+    term: d.term,
     hook: extractHook(d.body),
     body: d.body,
     charCount: d.body.length,
@@ -132,7 +137,7 @@ export async function draftFromResearch(
     const written = await runWriter({ concept: await withTopic(concept), research, voice, angles });
     const variants: VariantForCritique[] = written.variants.map((v) => ({
       ...v,
-      constraintViolations: checkHardConstraints(v.body),
+      constraintViolations: checkHardConstraints(v.body, { term: v.term }),
     }));
     for (const v of variants) {
       log(`  ${v.angle}: ${v.body.length} chars, ${v.constraintViolations.length} constraint violation(s)`);
@@ -146,6 +151,7 @@ export async function draftFromResearch(
     log(`  winner: ${winner.angle} score=${winnerEval.score} autoFails=[${winnerEval.autoFails.join(',')}]`);
 
     let body = winner.body;
+    let term = winner.term ?? null;
     let score = winnerEval.score;
     let autoFails: string[] = winnerEval.autoFails;
     let issues = winnerEval.issues;
@@ -160,6 +166,7 @@ export async function draftFromResearch(
         concept,
         researchId: researchDoc._id,
         angle: winner.angle,
+        term,
         body,
         score,
         autoFails,
@@ -175,21 +182,22 @@ export async function draftFromResearch(
       const revision = await runReviser({
         research,
         voice,
-        failing: { angle: winner.angle, body },
+        failing: { angle: winner.angle, term: term ?? undefined, body },
         critique: { ...winnerEval, revisionNotes: critique.revisionNotes },
         constraintViolations: violations,
       });
       revised = true;
       version = 2;
       body = revision.body;
-      violations = checkHardConstraints(body);
+      term = revision.term ?? term;
+      violations = checkHardConstraints(body, { term });
 
       log('re-critiquing revision');
       const recritique = await runCritic({
         research,
         voice,
         recentHooks,
-        variants: [{ angle: winner.angle, body, constraintViolations: violations }],
+        variants: [{ angle: winner.angle, term: term ?? undefined, body, constraintViolations: violations }],
       });
       const revEval = recritique.evaluations[0];
       score = revEval.score;
@@ -204,6 +212,7 @@ export async function draftFromResearch(
       concept,
       researchId: researchDoc._id,
       angle: winner.angle,
+      term,
       body,
       score,
       autoFails,
@@ -222,6 +231,7 @@ export async function draftFromResearch(
       draftId: draftId.toString(),
       researchId: researchDoc._id.toString(),
       angle: winner.angle,
+      term,
       body,
       score,
       autoFails,

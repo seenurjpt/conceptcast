@@ -41,7 +41,7 @@ const AUTHOR = {
   '@id': `${SITE_URL}/#author`,
   name: SITE_AUTHOR.name,
   url: SITE_AUTHOR.url,
-  sameAs: [SITE_AUTHOR.url],
+  sameAs: [SITE_AUTHOR.url, SITE_AUTHOR.linkedin],
 };
 
 const STRUCTURED_DATA = {

@@ -23,9 +23,10 @@ const PUBLIC_PREFIXES = [
 
 /**
  * Exact paths crawlers and link previews fetch without credentials: the
- * landing page itself, robots.txt, the sitemap and the social preview image.
+ * landing page itself, the About and Privacy pages, robots.txt, the sitemap
+ * and the social preview image.
  */
-const PUBLIC_EXACT = new Set(['/', '/robots.txt', '/sitemap.xml', '/opengraph-image', '/twitter-image']);
+const PUBLIC_EXACT = new Set(['/', '/about', '/privacy', '/robots.txt', '/sitemap.xml', '/opengraph-image', '/twitter-image']);
 
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;

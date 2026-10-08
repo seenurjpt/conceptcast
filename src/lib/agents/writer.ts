@@ -60,7 +60,8 @@ export async function runWriter(input: WriterInput): Promise<WriterOutput> {
 export interface ReviserInput {
   research: Research;
   voice: VoiceContext;
-  failing: { angle: Angle; body: string };
+  /** `term`: what the post must open with; the reviser keeps it unless it was the wrong term. */
+  failing: { angle: Angle; term?: string; body: string };
   critique: Evaluation & { revisionNotes: string };
   constraintViolations: string[];
 }
@@ -77,7 +78,8 @@ export async function runReviser(input: ReviserInput): Promise<RevisionOutput> {
         role: 'user',
         content:
           `${researchBlock(input.research)}\n\n` +
-          `# Failing draft (angle: ${input.failing.angle}, ${input.failing.body.length} chars)\n\n${input.failing.body}\n\n` +
+          `# Failing draft (angle: ${input.failing.angle}, ${input.failing.body.length} chars` +
+          `${input.failing.term ? `, term: ${input.failing.term}` : ''})\n\n${input.failing.body}\n\n` +
           `# Critic evaluation\n\n\`\`\`json\n${JSON.stringify(input.critique, null, 2)}\n\`\`\`\n\n` +
           (input.constraintViolations.length
             ? `# Machine constraint violations\n\n${input.constraintViolations.map((x) => `- ${x}`).join('\n')}`

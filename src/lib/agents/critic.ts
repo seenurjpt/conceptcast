@@ -5,6 +5,8 @@ import { buildSystem, researchBlock } from './shared';
 
 export interface VariantForCritique {
   angle: Angle;
+  /** The term the post must open with; the critic judges whether it is the right one. */
+  term?: string;
   body: string;
   constraintViolations: string[];
 }
@@ -22,7 +24,7 @@ export async function runCritic(input: CriticInput): Promise<Critique> {
   const variantBlocks = input.variants
     .map(
       (v) =>
-        `<variant angle="${v.angle}" chars="${v.body.length}">\n${v.body}\n</variant>\n` +
+        `<variant angle="${v.angle}"${v.term ? ` term="${v.term.replace(/"/g, "'")}"` : ''} chars="${v.body.length}">\n${v.body}\n</variant>\n` +
         (v.constraintViolations.length
           ? `Machine constraint check FAILED for this variant:\n${v.constraintViolations.map((x) => `- ${x}`).join('\n')}`
           : 'Machine constraint check passed for this variant.'),

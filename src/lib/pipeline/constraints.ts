@@ -15,8 +15,13 @@ const MATH_ALPHANUMERIC = /[\u{1D400}-\u{1D7FF}]/u;
 const EMOJI =
   /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{1F000}-\u{1F0FF}]/u;
 
-export const MIN_CHARS = 1_000;
-export const MAX_CHARS = 1_700;
+/**
+ * Researched posts: short enough to read in one sitting on a phone, long
+ * enough to define the term, show how it works and say what to do. The
+ * writer aims for 700-900; this is the hard window.
+ */
+export const MIN_CHARS = 600;
+export const MAX_CHARS = 1_000;
 
 /** "I'm starting to learn X" posts: short, a few more hashtags allowed. */
 export const ANNOUNCEMENT_MIN_CHARS = 300;
@@ -49,7 +54,25 @@ export function lengthLimits(kind: ConstraintKind = 'post'): { min: number; max:
   return kind === 'announcement' ? { min: ANNOUNCEMENT_MIN_CHARS, max: ANNOUNCEMENT_MAX_CHARS } : { min: MIN_CHARS, max: MAX_CHARS };
 }
 
-export function checkHardConstraints(body: string, opts: { kind?: ConstraintKind } = {}): string[] {
+/**
+ * Does the post open with its term? Case-insensitive, ignoring leading
+ * whitespace and an opening quote, so "Backpressure is…" and "backpressure:"
+ * both count for the term "Backpressure".
+ */
+export function opensWithTerm(body: string, term: string): boolean {
+  const first = (body.split('\n').find((l) => l.trim().length > 0) ?? '').trim().replace(/^["'“‘]/, '');
+  const t = term.trim().toLowerCase();
+  return t.length > 0 && first.toLowerCase().startsWith(t);
+}
+
+export function checkHardConstraints(
+  body: string,
+  opts: {
+    kind?: ConstraintKind;
+    /** The concept's name as the writer chose it; a post must open with it. Omitted for older drafts. */
+    term?: string | null;
+  } = {},
+): string[] {
   const kind = opts.kind ?? 'post';
   const { min, max } = lengthLimits(kind);
   // The author's own words: the house style rules are for the AI writer,
@@ -66,6 +89,11 @@ export function checkHardConstraints(body: string, opts: { kind?: ConstraintKind
 
   if (len < min || len > max) {
     violations.push(`length: ${len} chars (must be ${min}-${max})`);
+  }
+
+  // Term first: a reader who has never heard of it knows from line one what the post is about.
+  if (kind === 'post' && opts.term && !opensWithTerm(body, opts.term)) {
+    violations.push(`opening: the first line must start with the term "${opts.term.trim()}"`);
   }
 
   const hook = nonEmpty.slice(0, 2).join(' ');
@@ -112,11 +140,14 @@ export function checkHardConstraints(body: string, opts: { kind?: ConstraintKind
   const openingSingles = nonEmpty.slice(0, 4).filter((l) => l.trim().split(/\s+/).length === 1);
   if (openingSingles.length >= 3) violations.push('slop: one-word-per-line dramatic opening');
 
-  // "Line break every 1-2 sentences": flag paragraphs that run 4+ sentences.
+  // "Line break every 1-2 sentences". Posts are held to it exactly (3+ is
+  // flagged) because dense paragraphs are what made them feel long;
+  // announcements keep the older 4+ threshold.
+  const maxSentences = kind === 'post' ? 2 : 3;
   for (const line of nonEmpty) {
     const sentences = line.split(/[.!?]+\s/).filter((s) => s.trim().length > 0);
-    if (sentences.length >= 4) {
-      violations.push('formatting: a paragraph runs 4+ sentences without a line break');
+    if (sentences.length > maxSentences) {
+      violations.push(`formatting: a paragraph runs ${maxSentences + 1}+ sentences without a line break`);
       break;
     }
   }

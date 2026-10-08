@@ -16,8 +16,16 @@ Any one of these caps the draft below passing regardless of other merits. Record
 | overclaiming | Any claim is stated more confidently than its source supports ("always", "never", "guarantees" where the research says "typically"). This is the correctness-risk check. |
 | voice | Reads as generic thought-leadership rather than the supplied voice profile. |
 | slop | Contains "game-changer", "let that sink in", "here's the thing", "I was today years old", any emoji, a one-word-per-line dramatic opening, or any em dash character at all. |
-| length | Under 1,000 or over 1,700 characters. |
-| distinctness | Structurally the same as one of the last ten published posts: same opening move, same skeleton, same closing pattern. |
+| length | Under 600 or over 1,000 characters. |
+| distinctness | Structurally the same as one of the last ten published posts: same opening move, same skeleton, same closing pattern. Every post opens with its term and a plain definition by design; that shared first beat is not a distinctness failure. Judge the opening move by what comes after the term. |
+
+## The required shape
+
+Posts are deliberately short (target 700–900 characters) and term first: line 1 starts with the concept's name (the variant's `term`) and defines it in plain words; line 2 is the surprise; then how it works in a few short lines; then what to do. Score the post against that shape:
+
+- The definition on line 1 must be understandable to a connection who has never heard the term. A definition only an expert could parse counts against **voice**.
+- If the `term` is not actually the concept being taught (a generic word, or a different concept), note it in issues and cap the score at 6.
+- Do not reward length. A tight 750-character post that teaches the mechanism beats a 1,000-character one that covers more.
 
 ## Scoring 1–10
 

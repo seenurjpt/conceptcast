@@ -22,10 +22,18 @@ test('pickAngles rotates by track and uses debug-story for difficulty 1', () => 
 
 test('writerOutputSchema enforces exactly the requested angles', () => {
   const schema = writerOutputSchema(['mechanism', 'debug-story']);
-  assert.ok(schema.safeParse({ variants: [{ angle: 'debug-story', body: 'x' }, { angle: 'mechanism', body: 'y' }] }).success);
+  const v = (angle: string, body: string) => ({ angle, term: 'Backpressure', body });
+  assert.ok(schema.safeParse({ variants: [v('debug-story', 'x'), v('mechanism', 'y')] }).success);
+  assert.equal(schema.safeParse({ variants: [v('mechanism', 'x')] }).success, false);
+  assert.equal(schema.safeParse({ variants: [v('mechanism', 'x'), v('tradeoff', 'y')] }).success, false);
+  assert.equal(schema.safeParse({ variants: [v('mechanism', 'x'), v('mechanism', 'y')] }).success, false);
+});
+
+test('writerOutputSchema requires a term on every variant', () => {
+  const schema = writerOutputSchema(['mechanism']);
   assert.equal(schema.safeParse({ variants: [{ angle: 'mechanism', body: 'x' }] }).success, false);
-  assert.equal(schema.safeParse({ variants: [{ angle: 'mechanism', body: 'x' }, { angle: 'tradeoff', body: 'y' }] }).success, false);
-  assert.equal(schema.safeParse({ variants: [{ angle: 'mechanism', body: 'x' }, { angle: 'mechanism', body: 'y' }] }).success, false);
+  assert.equal(schema.safeParse({ variants: [{ angle: 'mechanism', term: '  ', body: 'x' }] }).success, false);
+  assert.ok(schema.safeParse({ variants: [{ angle: 'mechanism', term: 'Consistent hashing', body: 'x' }] }).success);
 });
 
 test('combinedScore weights surprise double and adds relevance + timeliness', () => {

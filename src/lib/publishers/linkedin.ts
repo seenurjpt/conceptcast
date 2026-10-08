@@ -237,7 +237,19 @@ function restHeaders(accessToken: string): Record<string, string> {
   };
 }
 
-export function buildPostBody(memberUrn: string, text: string): Record<string, unknown> {
+/**
+ * A link preview card under the post. LinkedIn does not scrape URLs for
+ * API-created posts, so every field is supplied; `thumbnail` is an image URN
+ * from uploadImage().
+ */
+export interface ArticleCard {
+  source: string;
+  title: string;
+  description: string;
+  thumbnail?: string;
+}
+
+export function buildPostBody(memberUrn: string, text: string, article?: ArticleCard): Record<string, unknown> {
   return {
     author: memberUrn,
     commentary: escapeCommentary(text),
@@ -247,9 +259,53 @@ export function buildPostBody(memberUrn: string, text: string): Record<string, u
       targetEntities: [],
       thirdPartyDistributionChannels: [],
     },
+    ...(article
+      ? {
+          content: {
+            article: {
+              source: article.source,
+              title: article.title,
+              description: article.description,
+              ...(article.thumbnail ? { thumbnail: article.thumbnail } : {}),
+            },
+          },
+        }
+      : {}),
     lifecycleState: 'PUBLISHED',
     isReshareDisabledByAuthor: false,
   };
+}
+
+const IMAGES_URL = 'https://api.linkedin.com/rest/images?action=initializeUpload';
+
+/**
+ * Upload an image the member owns (Images API: register, then PUT the bytes).
+ * Returns the image URN. LinkedIn processes it asynchronously, and a token
+ * with only w_member_social cannot read its status back, so a caller using
+ * the URN immediately should be ready to retry.
+ */
+export async function uploadImage(bytes: ArrayBuffer, auth?: LinkedInAuthDoc | null): Promise<string> {
+  const a = auth ?? (await getAuth());
+  if (!a) throw new LinkedInPublishError('LinkedIn is not connected.', 401, false);
+  const init = await fetch(IMAGES_URL, {
+    method: 'POST',
+    headers: restHeaders(a.accessToken),
+    body: JSON.stringify({ initializeUploadRequest: { owner: a.memberUrn } }),
+  });
+  if (!init.ok) {
+    throw new LinkedInPublishError(`LinkedIn images initializeUpload ${init.status}: ${(await init.text()).slice(0, 300)}`, init.status, init.status >= 500);
+  }
+  const { value } = (await init.json()) as { value?: { uploadUrl?: string; image?: string } };
+  if (!value?.uploadUrl || !value.image) throw new LinkedInPublishError('LinkedIn initializeUpload returned no upload URL.', 500, true);
+  const put = await fetch(value.uploadUrl, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${a.accessToken}`, 'Content-Type': 'application/octet-stream' },
+    body: bytes,
+  });
+  if (!put.ok) {
+    throw new LinkedInPublishError(`LinkedIn image upload ${put.status}: ${(await put.text()).slice(0, 300)}`, put.status, put.status >= 500);
+  }
+  return value.image;
 }
 
 export class LinkedInPublishError extends Error {
@@ -264,10 +320,15 @@ export class LinkedInPublishError extends Error {
 }
 
 /**
- * Publishes plain text to the member's own feed. Returns the post URN read
- * from the `x-restli-id` header: the body is empty on success.
+ * Publishes to the member's own feed: text, optionally with a link card.
+ * Returns the post URN read from the `x-restli-id` header: the body is
+ * empty on success.
  */
-export async function publishPost(text: string, auth?: LinkedInAuthDoc | null): Promise<{ postUrn: string }> {
+export async function publishPost(
+  text: string,
+  auth?: LinkedInAuthDoc | null,
+  opts: { article?: ArticleCard } = {},
+): Promise<{ postUrn: string }> {
   const a = auth ?? (await getAuth());
   const state = authState(a);
   if (!a || state === 'expired' || state === 'refresh-expired') {
@@ -276,7 +337,7 @@ export async function publishPost(text: string, auth?: LinkedInAuthDoc | null): 
   const res = await fetch(POSTS_URL, {
     method: 'POST',
     headers: restHeaders(a.accessToken),
-    body: JSON.stringify(buildPostBody(a.memberUrn, text)),
+    body: JSON.stringify(buildPostBody(a.memberUrn, text, opts.article)),
   });
   if (res.status !== 201 && res.status !== 200) {
     const body = (await res.text()).slice(0, 500);

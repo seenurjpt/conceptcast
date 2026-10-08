@@ -245,6 +245,12 @@ export interface DraftDoc {
   /** The main topic an announcement is about; null for posts (they reach it through the concept). */
   topicId: Types.ObjectId | null;
   angle: DraftAngle;
+  /**
+   * The concept's name as the post opens with it ("Backpressure"). Set by the
+   * writer; edits are re-checked against it. Null on older drafts and on
+   * announcements and custom posts, which have no term rule.
+   */
+  term: string | null;
   hook: string;
   body: string;
   charCount: number;
@@ -267,6 +273,7 @@ const DraftSchema = new Schema<DraftDoc>({
   researchId: { type: Schema.Types.ObjectId, ref: 'Research', default: null },
   topicId: { type: Schema.Types.ObjectId, ref: 'Topic', default: null, index: true },
   angle: { type: String, required: true, enum: DRAFT_ANGLES },
+  term: { type: String, default: null },
   hook: { type: String, required: true },
   body: { type: String, required: true },
   charCount: { type: Number, required: true },
@@ -329,6 +336,8 @@ export interface PublicationDoc {
   feedbackAppliedAt: Date | null;
   /** Append the "Posted from conceptcast" line when this row is published. */
   watermark: boolean;
+  /** How the credit went out when published: link card, text-line fallback, none (no room), or null (off). */
+  credit: 'card' | 'text' | 'none' | null;
   createdAt: Date;
 }
 
@@ -357,6 +366,7 @@ const PublicationSchema = new Schema<PublicationDoc>({
   },
   feedbackAppliedAt: { type: Date, default: null },
   watermark: { type: Boolean, required: true, default: false },
+  credit: { type: String, enum: ['card', 'text', 'none', null], default: null },
   createdAt: { type: Date, required: true, default: () => new Date() },
 });
 
@@ -401,6 +411,11 @@ export interface LinkedInAuthDoc {
   memberPicture: string | null;
   memberEmail: string | null;
   scopes: string[];
+  /** The link card's thumbnail, uploaded once to LinkedIn and reused (lib/linkCard.ts). */
+  cardImageUrn: string | null;
+  /** The member who owns that image; a different account needs its own upload. */
+  cardImageOwner: string | null;
+  cardImageAt: Date | null;
   updatedAt: Date;
 }
 
@@ -415,6 +430,9 @@ const LinkedInAuthSchema = new Schema<LinkedInAuthDoc>({
   memberPicture: { type: String, default: null },
   memberEmail: { type: String, default: null },
   scopes: { type: [String], required: true, default: [] },
+  cardImageUrn: { type: String, default: null },
+  cardImageOwner: { type: String, default: null },
+  cardImageAt: { type: Date, default: null },
   updatedAt: { type: Date, required: true, default: () => new Date() },
 });
 

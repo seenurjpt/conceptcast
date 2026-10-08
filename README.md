@@ -151,6 +151,10 @@ The app never pays for model calls. Each user adds their own key under **Setting
 
 `GET /api/user/keys` → `{ preferredProvider, active: [...], providers: { anthropic: { stored, hint }, … } }`.
 
+## Post shape
+
+Researched posts are short and term first: 600 to 1,000 characters (the writer aims for 700 to 900), opening with the concept's name and a plain-English definition, then the surprise, how it works in a few short lines, and what to change in your own code. The writer returns the `term` it used and the machine checks confirm the first line starts with it; the term is saved on the draft so edits on the Drafts page are checked against it. Paragraphs of three or more sentences are flagged. Rules live in [src/lib/prompts/writer.md](src/lib/prompts/writer.md) and [src/lib/pipeline/constraints.ts](src/lib/pipeline/constraints.ts); the critic's rubric exempts the shared term-first opening from its "same opening" check.
+
 ## Topics and subtopics
 
 A **Topic** is a main subject you are learning (`topics` collection: title, slug, description, `ownerUserId` or `null` for shared, `origin: user | migrated`). A **subtopic** is a `Concept` row with a `topicId`; the old `track` field is kept and is `custom` for anything you add. Subtopics you add or that Haiku suggests carry only a title and a focus line; prerequisites, difficulty, relevance and hand-seeded sources still exist on the model but are hidden for them, and the researcher falls back to web search when a subtopic has no sources. The researcher and writer are told the main topic and your voice-profile audience so a "System design" post reads differently from a "Coding agents" one.

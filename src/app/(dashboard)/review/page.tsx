@@ -21,7 +21,7 @@ import {
   Switch,
   TrackBadge,
 } from '@/components/ui';
-import { APP_URL, WATERMARK_LINE, watermarkWouldOverflow } from '@/lib/watermark';
+import { APP_URL, CARD_DOMAIN, CARD_IMAGE_URL, CARD_TITLE } from '@/lib/watermark';
 
 /** Per-browser memory of the last watermark choice. Off until the author turns it on. */
 const WATERMARK_PREF_KEY = 'cc_watermark';
@@ -41,6 +41,8 @@ function writeWatermarkPref(on: boolean): void {
 }
 
 type Status = 'pending' | 'approved' | 'published' | 'rejected';
+/** What an action hands back: a notice, optionally with the draft to select next. */
+type RunResult = string | void | { message: string; select?: string };
 const isStatus = (s: string | null): s is Status =>
   s === 'pending' || s === 'approved' || s === 'published' || s === 'rejected';
 const ANGLES = ['mechanism', 'misconception', 'tradeoff', 'debug-story'] as const;
@@ -59,6 +61,8 @@ interface DraftRow {
   _id: string;
   /** Older rows arrive without it; treated as 'post'. */
   kind?: 'post' | 'announcement' | 'custom';
+  /** The term a researched post opens with; edits are checked against it. Null on older drafts. */
+  term?: string | null;
   angle: string;
   hook: string;
   body: string;
@@ -133,30 +137,53 @@ export default function ReviewPage() {
     }
   }, []);
 
-  const loadList = useCallback(async () => {
-    try {
-      const { drafts } = await getJson<{ drafts: DraftRow[] }>(`/api/drafts?status=${tab}`);
-      setRows(drafts);
-      // ?draft=<id> comes from the Topics screen, so a freshly written post
-      // opens straight away instead of making you hunt for it.
-      const requested = new URLSearchParams(window.location.search).get('draft');
-      setSelectedId((cur) => {
-        if (requested && drafts.some((d) => d._id === requested)) return requested;
-        if (cur && drafts.some((d) => d._id === cur)) return cur;
-        return drafts[0]?._id ?? null;
-      });
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [tab]);
+  /** The selection as of now, for async code that must not use a stale closure. */
+  const selectedRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedRef.current = selectedId;
+  }, [selectedId]);
 
+  /**
+   * Reload the list and settle the selection. Returns the id it chose, so a
+   * caller reloads the panel for that draft, not the one selected before
+   * (after a rewrite the old draft leaves the list and the new one is chosen).
+   */
+  const loadList = useCallback(
+    async (prefer?: string): Promise<string | null> => {
+      try {
+        const { drafts } = await getJson<{ drafts: DraftRow[] }>(`/api/drafts?status=${tab}`);
+        setRows(drafts);
+        // ?draft=<id> comes from the Topics screen, so a freshly written post
+        // opens straight away instead of making you hunt for it.
+        const requested = new URLSearchParams(window.location.search).get('draft');
+        const has = (id: string | null | undefined): id is string => Boolean(id) && drafts.some((d) => d._id === id);
+        const cur = selectedRef.current;
+        const chosen = has(prefer) ? prefer : has(requested) ? requested : has(cur) ? cur : (drafts[0]?._id ?? null);
+        selectedRef.current = chosen;
+        setSelectedId(chosen);
+        return chosen;
+      } catch (e) {
+        setError((e as Error).message);
+        return selectedRef.current;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tab],
+  );
+
+  /**
+   * Latest request wins: a slow response for a draft you have moved away from
+   * must not overwrite the one you are looking at.
+   */
+  const detailRequest = useRef<string | null>(null);
   const loadDetail = useCallback(async (id: string) => {
+    detailRequest.current = id;
     try {
-      setDetail(await getJson<DraftDetail>(`/api/drafts/${id}`));
+      const d = await getJson<DraftDetail>(`/api/drafts/${id}`);
+      if (detailRequest.current === id) setDetail(d);
     } catch (e) {
-      setError((e as Error).message);
+      if (detailRequest.current === id) setError((e as Error).message);
     }
   }, []);
 
@@ -175,14 +202,21 @@ export default function ReviewPage() {
     else setDetail(null);
   }, [selectedId, loadDetail]);
 
-  const run = async (fn: () => Promise<string | void>) => {
+  /**
+   * Run an action, then refresh. The action may name a draft to select
+   * (a rewrite returns its new draft), so the panel shows it at once.
+   */
+  const run = async (fn: () => Promise<RunResult>) => {
     setError(null);
     setNotice(null);
     try {
-      const msg = await fn();
+      const out = await fn();
+      const msg = typeof out === 'object' && out ? out.message : out;
+      const prefer = typeof out === 'object' && out ? out.select : undefined;
       if (msg) setNotice(msg);
-      await Promise.all([loadList(), loadCounts()]);
-      if (selectedId) await loadDetail(selectedId);
+      const [chosen] = await Promise.all([loadList(prefer), loadCounts()]);
+      // Same draft as before (an edit, a schedule): its content changed, so reload it.
+      if (chosen) await loadDetail(chosen);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -280,7 +314,7 @@ export default function ReviewPage() {
   );
 }
 
-function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Promise<string | void>) => Promise<void> }) {
+function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Promise<RunResult>) => Promise<void> }) {
   const { draft, concept, research, previous, publication, topic } = detail;
   const announcement = isAnnouncement(draft);
   const custom = isCustom(draft);
@@ -298,9 +332,8 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
   const [watermark, setWatermark] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   useEffect(() => setWatermark(readWatermarkPref()), []);
-  const watermarkOverflow = watermark && watermarkWouldOverflow(body);
 
-  const violations = useMemo(() => checkHardConstraints(body, { kind }), [body, kind]);
+  const violations = useMemo(() => checkHardConstraints(body, { kind, term: draft.term }), [body, kind, draft.term]);
   const dirty = body !== draft.body;
   const canDecide = draft.status === 'pending' || draft.status === 'approved';
   const canPublish = session?.signedIn ?? false;
@@ -325,9 +358,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
       ? 'Save or discard your edit first.'
       : !canPublish && !when
           ? 'Sign in with LinkedIn to publish now, or pick a time to schedule it.'
-          : watermarkOverflow
-            ? 'With the watermark this post passes LinkedIn’s 3000 character limit. Shorten it or turn the watermark off.'
-            : null;
+          : null;
 
   // The same problems in a few words: the slider's error label when one
   // stops a publish.
@@ -335,9 +366,7 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
     ? null
     : dirty
       ? 'Save your edit first'
-      : !canPublish && !when
-          ? 'Sign in or schedule'
-          : 'Too long';
+      : 'Sign in or schedule';
 
   const publishedMsg = useRef<string | null>(null);
   const confirmPublish = async () => {
@@ -678,16 +707,18 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                       setWatermark(on);
                       writeWatermarkPref(on);
                     }}
-                    label="Add “Posted from conceptcast”"
-                    hint="A line under the post linking readers to the app."
+                    label="Add a conceptcast link card"
+                    hint="A preview card under the post that opens the app, like a product link."
                   />
                   {watermark && (
-                    <p className="watermark-preview t-caption mt-2 text-body">
-                      {WATERMARK_LINE.replace(APP_URL, '')}
-                      <a className="text-primary hover:underline" href={APP_URL} target="_blank" rel="noreferrer">
-                        {APP_URL}
-                      </a>
-                    </p>
+                    <a className="link-card-preview mt-2" href={APP_URL} target="_blank" rel="noreferrer" aria-label="Preview of the link card">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- the deployed share image, shown as LinkedIn will */}
+                      <img src={CARD_IMAGE_URL} alt="" width={1200} height={630} loading="lazy" />
+                      <span className="link-card-preview-text">
+                        <span className="link-card-preview-title">{CARD_TITLE}</span>
+                        <span className="link-card-preview-domain">{CARD_DOMAIN}</span>
+                      </span>
+                    </a>
                   )}
                 </div>
 
@@ -699,11 +730,11 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                       disabled={!topic}
                       onClick={() =>
                         run(async () => {
-                          await sendJson(`/api/topics/${topic?._id}/announce`, 'POST', {
+                          const r = await sendJson<{ draftId: string }>(`/api/topics/${topic?._id}/announce`, 'POST', {
                             why: draft.announce?.why ?? undefined,
                             cadence: draft.announce?.cadence ?? undefined,
                           });
-                          return 'Rewritten. The new version is at the top of the pending list.';
+                          return { message: 'Rewritten. Here is the new version.', select: r.draftId };
                         })
                       }
                     >
@@ -732,13 +763,13 @@ function DraftPanel({ detail, run }: { detail: DraftDetail; run: (fn: () => Prom
                       pendingLabel="Writing…"
                       onClick={() =>
                         run(async () => {
-                          const r = await sendJson<{ result: { status: string; score: number } }>(
+                          const r = await sendJson<{ result: { status: string; score: number; draftId: string } }>(
                             `/api/drafts/${draft._id}/regenerate`,
                             'POST',
                             { angle },
                           );
                           return r.result.status === 'pass'
-                            ? `Rewritten, scored ${r.result.score}. It is at the top of the pending list.`
+                            ? { message: `Rewritten, scored ${r.result.score}. Here is the new version.`, select: r.result.draftId }
                             : `The rewrite scored ${r.result.score} and was killed. The concept went back to the backlog.`;
                         })
                       }

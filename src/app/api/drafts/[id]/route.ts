@@ -41,7 +41,7 @@ export const GET = handler(async (_req: Request, ctx: Ctx) => {
     publication,
     previous,
     topic,
-    constraintViolations: checkHardConstraints(draft.body, { kind }),
+    constraintViolations: checkHardConstraints(draft.body, { kind, term: draft.term }),
   });
 });
 
@@ -62,5 +62,5 @@ export const PATCH = handler(async (req: Request, ctx: Ctx) => {
   }
   if (body.body === undefined) throw new HttpError(400, 'Nothing to update.');
   const draft = await editDraft(id, body.body);
-  return ok({ draft, constraintViolations: checkHardConstraints(draft.body, { kind: draft.kind ?? 'post' }) });
+  return ok({ draft, constraintViolations: checkHardConstraints(draft.body, { kind: draft.kind ?? 'post', term: draft.term }) });
 });

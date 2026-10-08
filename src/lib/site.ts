@@ -23,6 +23,8 @@ export const SITE_NAME = 'conceptcast';
 export const SITE_AUTHOR = {
   name: 'Sunny Rajput',
   url: 'https://github.com/seenurjpt',
+  /** Where people can connect with or message the author. */
+  linkedin: 'https://www.linkedin.com/in/sunnyrajput27',
 } as const;
 
 export const SITE_TITLE = 'conceptcast: researched LinkedIn posts on what you are learning';

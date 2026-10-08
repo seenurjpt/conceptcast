@@ -19,7 +19,7 @@ const body = [
 describe('announcement checks', () => {
   it('uses a shorter length range than regular posts', () => {
     expect(lengthLimits('announcement')).toEqual({ min: 300, max: 900 });
-    expect(lengthLimits('post')).toEqual({ min: 1000, max: 1700 });
+    expect(lengthLimits('post')).toEqual({ min: 600, max: 1000 });
   });
 
   it('passes a well-formed announcement with five hashtags', () => {

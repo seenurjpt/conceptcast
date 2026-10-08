@@ -42,18 +42,24 @@ export function Dock() {
 
         <span aria-hidden className="mx-1 hidden h-5 w-px bg-[var(--lp-line-2)] sm:block" />
 
-        <a
-          href="#how"
+        <Link
+          href="/#how"
           className="hidden rounded-[100px] px-3.5 py-2 text-[13px] font-medium text-[color:var(--lp-ink-2)] transition-colors hover:bg-[var(--lp-chip-hover)] hover:text-[color:var(--lp-ink)] sm:block"
         >
           How it works
-        </a>
-        <a
-          href="#keys"
+        </Link>
+        <Link
+          href="/#keys"
           className="hidden rounded-[100px] px-3.5 py-2 text-[13px] font-medium text-[color:var(--lp-ink-2)] transition-colors hover:bg-[var(--lp-chip-hover)] hover:text-[color:var(--lp-ink)] md:block"
         >
           Pricing
-        </a>
+        </Link>
+        <Link
+          href="/about"
+          className="hidden rounded-[100px] px-3.5 py-2 text-[13px] font-medium text-[color:var(--lp-ink-2)] transition-colors hover:bg-[var(--lp-chip-hover)] hover:text-[color:var(--lp-ink)] md:block"
+        >
+          About
+        </Link>
 
         <ThemeSwitch />
         <Link href="/login" className="btn btn-sm btn-primary h-9 px-4">

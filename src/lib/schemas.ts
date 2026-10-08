@@ -48,6 +48,8 @@ export type Angle = z.infer<typeof AngleSchema>;
 
 const VariantSchema = z.object({
   angle: AngleSchema,
+  /** The concept's name in its common short form ("Backpressure"); the body must open with it. */
+  term: z.string().trim().min(1).max(60),
   body: z.string(),
 });
 
@@ -63,7 +65,7 @@ export function writerOutputSchema(angles: readonly Angle[]) {
       { message: `variants must cover exactly these angles: ${angles.join(', ')}` },
     );
 }
-export type WriterOutput = { variants: { angle: Angle; body: string }[] };
+export type WriterOutput = { variants: { angle: Angle; term: string; body: string }[] };
 
 export const RevisionOutputSchema = VariantSchema;
 export type RevisionOutput = z.infer<typeof RevisionOutputSchema>;

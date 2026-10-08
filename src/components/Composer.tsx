@@ -28,7 +28,7 @@ import { useSession } from './SessionProvider';
 import { PublishSlider } from './PublishSlider';
 import { sendJson, fmtDate, toLocalInput } from '@/lib/ui';
 import { lockPage } from '@/lib/pageLock';
-import { LINKEDIN_HARD_CAP, WATERMARK_COST } from '@/lib/watermark';
+import { LINKEDIN_HARD_CAP } from '@/lib/watermark';
 
 /**
  * "Write a post": a composer for posts the author writes themselves.
@@ -217,7 +217,8 @@ function ComposerBody({ onClose }: { onClose: () => void }) {
   }, [onClose, askOpen]);
 
   const trimmed = text.trim();
-  const limit = watermark ? LINKEDIN_HARD_CAP - WATERMARK_COST : LINKEDIN_HARD_CAP;
+  // The credit is a link card under the post, so it takes none of the text limit.
+  const limit = LINKEDIN_HARD_CAP;
   const over = text.length > limit;
   const scheduled = scheduleOn && Boolean(when);
   const signedIn = session?.signedIn ?? false;
@@ -589,7 +590,7 @@ function ComposerBody({ onClose }: { onClose: () => void }) {
                   store.set(WATERMARK_KEY, e.target.checked ? '1' : '0');
                 }}
               />
-              Add {'“'}Posted from conceptcast{'”'}
+              Add a conceptcast link card
             </label>
           </div>
 

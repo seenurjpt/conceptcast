@@ -12,7 +12,8 @@ import {
 } from './db/models';
 import { publishPost, fetchSocialMetrics, LinkedInPublishError } from './publishers/linkedin';
 import { applyEngagementFeedback } from './feedback';
-import { LINKEDIN_HARD_CAP, withWatermark } from './watermark';
+import { LINKEDIN_HARD_CAP } from './watermark';
+import { publishWithLinkCard } from './linkCard';
 
 export const MAX_PUBLISH_ATTEMPTS = 3;
 
@@ -119,20 +120,23 @@ export async function publishPublication(publicationId: Types.ObjectId | string)
     return { publicationId: String(claimed._id), status: 'failed', error: 'Draft missing' };
   }
 
-  // Rows created before the field existed have no value: treat as off.
-  const text = withWatermark(draft.body, claimed.watermark === true);
-  if (text.normalize('NFC').length > LINKEDIN_HARD_CAP) {
-    const error = `Post is ${text.length} characters with the watermark; LinkedIn allows ${LINKEDIN_HARD_CAP}. Shorten it or turn the watermark off.`;
+  if (draft.body.normalize('NFC').length > LINKEDIN_HARD_CAP) {
+    const error = `Post is ${draft.body.length} characters; LinkedIn allows ${LINKEDIN_HARD_CAP}. Shorten it.`;
     await Publication.updateOne({ _id: claimed._id }, { $set: { status: 'failed', error } });
     return { publicationId: String(claimed._id), status: 'failed', error };
   }
 
   try {
-    const { postUrn } = await publishPost(text);
+    // The credit is a link card under the post (text-line fallback). Rows
+    // created before the field existed have no value: treat as off.
+    const { postUrn, credit } =
+      claimed.watermark === true
+        ? await publishWithLinkCard(draft.body, (m) => console.log(`[publish ${claimed._id}] ${m}`))
+        : { ...(await publishPost(draft.body)), credit: null };
     const publishedAt = new Date();
     await Publication.updateOne(
       { _id: claimed._id },
-      { $set: { status: 'published', postUrn, publishedAt, error: null } },
+      { $set: { status: 'published', postUrn, publishedAt, error: null, credit } },
     );
     await Draft.updateOne({ _id: draft._id }, { $set: { status: 'published' } });
     if (draft.conceptId) await Concept.updateOne(

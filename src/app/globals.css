@@ -3736,3 +3736,292 @@ button.side-cta {
     display: none;
   }
 }
+
+/* The conceptcast link card as LinkedIn will show it under the post. */
+.link-card-preview {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 150ms ease;
+}
+.link-card-preview:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--hairline));
+}
+.link-card-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+  background: #000;
+}
+.link-card-preview-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+}
+.link-card-preview-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.link-card-preview-domain {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ── about and privacy pages ─────────────────────────────────────────────── */
+.about-step,
+.about-principle {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  padding: 20px;
+}
+.about-step-num {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 100px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+.about-principle {
+  display: flex;
+  gap: 14px;
+}
+.about-principle-mark {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 100px;
+  background: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+/* Privacy: a contents list beside the text from lg up, sticky as you read. */
+.legal {
+  display: grid;
+  gap: 40px;
+}
+@media (min-width: 1024px) {
+  .legal {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 56px;
+  }
+}
+.legal-toc {
+  align-self: start;
+}
+@media (min-width: 1024px) {
+  .legal-toc {
+    position: sticky;
+    top: 104px;
+  }
+}
+.legal-toc ol {
+  display: grid;
+  gap: 2px;
+  margin-top: 10px;
+  counter-reset: toc;
+}
+.legal-toc a {
+  position: relative;
+  display: block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13.5px;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.legal-toc a:hover {
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+/* The section being read: a soft pill with a primary bar that slides
+   between items as you scroll. */
+.legal-toc a.is-active {
+  color: var(--ink);
+  font-weight: 600;
+}
+.legal-toc a.is-active:hover {
+  background: transparent;
+}
+.legal-toc-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-card));
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+.legal-summary {
+  padding: 20px 22px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--hairline));
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface-card));
+}
+.legal-summary ul {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.legal-summary li {
+  position: relative;
+  padding-left: 22px;
+  color: var(--body);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+.legal-summary li::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 100px;
+  background: var(--primary);
+}
+.legal-body section {
+  scroll-margin-top: 104px;
+  padding-top: 36px;
+}
+.legal-body h2 {
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.legal-body h3 {
+  margin-top: 20px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+.legal-body p,
+.legal-body li {
+  color: var(--body);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.legal-body p {
+  margin-top: 12px;
+}
+.legal-body ul {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding-left: 20px;
+  list-style: disc;
+}
+.legal-body li::marker {
+  color: var(--muted);
+}
+.legal-body a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.legal-body code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  font-family: var(--font-mono-face), ui-monospace, monospace;
+  font-size: 13px;
+}
+.legal-table {
+  width: 100%;
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+.legal-table th,
+.legal-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--hairline-soft);
+  text-align: left;
+  vertical-align: top;
+}
+.legal-table tr:last-child td {
+  border-bottom: 0;
+}
+.legal-table th {
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.legal-table td {
+  color: var(--body);
+  line-height: 1.55;
+}
+.legal-table td:first-child {
+  color: var(--ink);
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* Phones: each row stacks, so nothing scrolls sideways. */
+@media (max-width: 639px) {
+  .legal-table thead {
+    display: none;
+  }
+  .legal-table tr,
+  .legal-table td {
+    display: block;
+  }
+  .legal-table td {
+    padding: 4px 14px;
+    border-bottom: 0;
+  }
+  .legal-table td:first-child {
+    padding-top: 12px;
+    white-space: normal;
+  }
+  .legal-table tr {
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .legal-table tr:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* Footer social links: small round icon buttons beside the author's name. */
+.footer-social {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 100px;
+  color: var(--lp-ink-3);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.footer-social:hover {
+  background: var(--lp-chip-hover);
+  color: var(--lp-ink);
+}
+.footer-social:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
