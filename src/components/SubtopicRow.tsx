@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { sendJson } from '@/lib/ui';
+import { getJson, sendJson } from '@/lib/ui';
 import { WritingProgress, type ProgressMode } from './WritingProgress';
 import { ActionButton, TrackBadge } from './ui';
 import { researchBadge } from '@/lib/research/pool';
@@ -31,7 +31,37 @@ export interface Subtopic {
     retryAfter: string | null;
     error: string | null;
   } | null;
+  /** A Write in progress holds the subtopic until this time. */
+  writeLockedUntil?: string | null;
   createdAt?: string;
+}
+
+interface GenerateResponse {
+  queued: boolean;
+  result?: { status: string; score: number; draftId: string };
+}
+
+const RESEARCH_POLL_MS = 5_000;
+/** Past the research lease (six minutes): something went wrong. */
+const RESEARCH_WAIT_MS = 8 * 60_000;
+
+/** Polls a subtopic until its research is ready; throws if it fails or takes too long. */
+async function waitForResearch(slug: string): Promise<void> {
+  const deadline = Date.now() + RESEARCH_WAIT_MS;
+  for (;;) {
+    await new Promise((resolve) => setTimeout(resolve, RESEARCH_POLL_MS));
+    const { concept } = await getJson<{ concept: Pick<Subtopic, 'researchState'> }>(`/api/concepts/${slug}`);
+    const state = concept.researchState;
+    if (state?.status === 'ready') return;
+    if (state?.status === 'failed') throw new Error(`Research failed: ${state.error ?? 'unknown error'}. Try again.`);
+    // "Running" past its lease means the run died without saying so: retryable.
+    if (state?.status === 'running' && state.lockedUntil && new Date(state.lockedUntil).getTime() < Date.now()) {
+      throw new Error('Research was interrupted. Nothing was lost; try Write a post again.');
+    }
+    if (Date.now() > deadline) {
+      throw new Error('Research is taking longer than usual. It keeps going in the background; try Write a post again in a few minutes.');
+    }
+  }
 }
 
 /** "3d old" style age for news topics; null when there is no story date. */
@@ -69,6 +99,8 @@ export function SubtopicRow({
   const unmet = showMetadata ? c.prerequisites.filter((p) => !publishedSlugs.has(p)) : [];
   const eligible = c.status === 'backlog' && unmet.length === 0;
   const summary = c.oneLiner || c.focus;
+  // Another tab (or a run before a reload) is writing this one right now.
+  const beingWritten = !writingSince && Boolean(c.writeLockedUntil && new Date(c.writeLockedUntil).getTime() > Date.now());
 
   return (
     <li className={`row flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:gap-4${writingSince ? ' writing-row' : ''}`}>
@@ -92,6 +124,11 @@ export function SubtopicRow({
           {research === 'ready' && (
             <span className="badge badge-up" title="Research is done in the background, so writing skips straight to drafting.">
               researched
+            </span>
+          )}
+          {beingWritten && (
+            <span className="badge badge-primary research-running" title="A Write is in progress. If it fails, this goes back to waiting.">
+              writing
             </span>
           )}
           {research === 'running' && (
@@ -163,11 +200,23 @@ export function SubtopicRow({
               setWritingSince(Date.now());
               try {
                 await run(async () => {
-                  const r = await sendJson<{ queued: boolean; result?: { status: string; score: number; draftId: string } }>(
-                    `/api/concepts/${c.slug}/generate`,
-                    'POST',
-                    { force: c.status !== 'backlog' },
-                  );
+                  let r: GenerateResponse;
+                  if (c.status === 'backlog') {
+                    // Step 1: research. Answers at once; research itself runs
+                    // in the background on the server, so wait for it here.
+                    const researched = await sendJson<{ status: 'ready' | 'running' }>(`/api/concepts/${c.slug}/research`, 'POST');
+                    if (researched.status !== 'ready') {
+                      await waitForResearch(c.slug);
+                      setProgressMode('researched');
+                      setWritingSince(Date.now());
+                    }
+                    // Step 2: write. All or nothing on the server: a draft, or
+                    // the subtopic exactly as it was.
+                    r = { queued: false, ...(await sendJson<Pick<GenerateResponse, 'result'>>(`/api/concepts/${c.slug}/write`, 'POST', {})) };
+                  } else {
+                    // Rewriting a subtopic already in flight: research exists.
+                    r = await sendJson<GenerateResponse>(`/api/concepts/${c.slug}/generate`, 'POST', { force: true });
+                  }
                   if (r.queued) return `Queued ${c.title}.`;
                   if (r.result?.status === 'pass') {
                     router.push(`/review?draft=${r.result.draftId}`);

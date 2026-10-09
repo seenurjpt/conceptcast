@@ -36,6 +36,8 @@ const WAIT_POLL_MS = 3_000;
 /** Vercel's function limit, and how long one round of background research may take. */
 const FUNCTION_LIMIT_MS = 300_000;
 const ROUND_ESTIMATE_MS = 160_000;
+/** Stop waiting this long before the function limit, to record the outcome. */
+const RESEARCH_MARGIN_MS = 15_000;
 
 /* ── reuse ────────────────────────────────────────────────────────────────── */
 
@@ -146,6 +148,72 @@ export async function obtainResearch(concept: ConceptDoc, log: Log = noop): Prom
       throw new Error('Research for this topic is still running in the background. Try again in a minute.');
     }
   }
+}
+
+export type ResearchKick = 'ready' | 'started' | 'running';
+
+/**
+ * Research for a Write click, without waiting for it. Research with web
+ * search can take four minutes or more, which with drafting on top passes
+ * Vercel's 300 s function limit, so the click is split in two: this starts
+ * research after the response (or reports it is already ready or running),
+ * the page polls the subtopic, and a second Write request drafts from the
+ * finished research. The subtopic stays in the backlog meanwhile.
+ */
+export async function researchInBackground(
+  concept: ConceptDoc,
+  opts: { requestStartedAt?: number } = {},
+): Promise<ResearchKick> {
+  const fresh = await freshResearchFor(concept);
+  if (fresh) {
+    if (concept.researchState?.status !== 'ready') await markReady(concept._id, fresh);
+    return 'ready';
+  }
+  const claimed = await claimLease(concept._id, 'on-demand');
+  if (!claimed) return 'running';
+  const log: Log = (m) => console.log(`[research] ${concept.slug}: ${m}`);
+  // Leave a margin before the platform kills the function, so a run that
+  // cannot finish is recorded as failed (retryable) rather than left looking
+  // like it is still going.
+  const budget = (opts.requestStartedAt ?? Date.now()) + FUNCTION_LIMIT_MS - RESEARCH_MARGIN_MS - Date.now();
+  after(async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await dbConnect();
+      await Promise.race([
+        researchUnderLease(claimed, 'on-demand', log),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('timeout')), Math.max(0, budget));
+        }),
+      ]);
+    } catch (e) {
+      if ((e as Error).message === 'timeout') {
+        await markResearchTimedOut(claimed);
+        log('ran out of time; marked failed');
+      } else {
+        // researchUnderLease records other failures on the subtopic itself.
+        log(`failed: ${(e as Error).message}`);
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+  return 'started';
+}
+
+/** Research still running when its time ran out: record it as a retryable failure. */
+async function markResearchTimedOut(claimed: ConceptDoc): Promise<void> {
+  await Concept.updateOne(
+    { _id: claimed._id, 'researchState.status': 'running', 'researchState.startedAt': claimed.researchState.startedAt },
+    {
+      $set: {
+        'researchState.status': 'failed',
+        'researchState.lockedUntil': null,
+        'researchState.error': 'Research took longer than the five minutes a request is allowed. Try again; it is usually quicker the second time.',
+        'researchState.retryAfter': null,
+      },
+    },
+  );
 }
 
 /* ── the pool ─────────────────────────────────────────────────────────────── */

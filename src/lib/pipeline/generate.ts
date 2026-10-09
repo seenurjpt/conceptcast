@@ -3,10 +3,11 @@
  * routes and the Inngest function. Two halves so Inngest can checkpoint
  * between them: `researchConcept` and `draftFromResearch`.
  */
-import type { Types } from 'mongoose';
+import mongoose, { type ClientSession, type Types } from 'mongoose';
 import { Concept, Research, Draft, type ConceptDoc, type ResearchDoc, type DraftDoc } from '../db/models';
 import { withTopic } from './research';
-import { obtainResearch } from '../research/service';
+import { freshResearchFor, obtainResearch } from '../research/service';
+import { HttpError } from '../api';
 import { installUsageSink, setUsageConcept } from '../db/usageSink';
 import { dropMediumConfidence } from '../agents/researcher';
 import { runWriter, runReviser, pickAngles } from '../agents/writer';
@@ -86,30 +87,35 @@ interface DraftSaveInput {
   status: DraftDoc['status'];
 }
 
-async function saveDraft(d: DraftSaveInput): Promise<Types.ObjectId> {
-  const doc = await Draft.create({
-    conceptId: d.concept._id,
-    researchId: d.researchId,
-    angle: d.angle,
-    term: d.term,
-    hook: extractHook(d.body),
-    body: d.body,
-    charCount: d.body.length,
-    hashtags: extractHashtags(d.body),
-    critique: {
-      score: d.score,
-      issues: [
-        ...d.autoFails.map((f) => `auto-fail: ${f}`),
-        ...d.violations.map((v) => `constraint: ${v}`),
-        ...d.issues,
-      ],
-      strengths: d.strengths,
-      depthPassed: d.autoFails.length === 0 && d.violations.length === 0,
-      revisionOf: d.revisionOf,
-    },
-    version: d.version,
-    status: d.status,
-  });
+async function saveDraft(d: DraftSaveInput, session?: ClientSession): Promise<Types.ObjectId> {
+  const [doc] = await Draft.create(
+    [
+      {
+        conceptId: d.concept._id,
+        researchId: d.researchId,
+        angle: d.angle,
+        term: d.term,
+        hook: extractHook(d.body),
+        body: d.body,
+        charCount: d.body.length,
+        hashtags: extractHashtags(d.body),
+        critique: {
+          score: d.score,
+          issues: [
+            ...d.autoFails.map((f) => `auto-fail: ${f}`),
+            ...d.violations.map((v) => `constraint: ${v}`),
+            ...d.issues,
+          ],
+          strengths: d.strengths,
+          depthPassed: d.autoFails.length === 0 && d.violations.length === 0,
+          revisionOf: d.revisionOf,
+        },
+        version: d.version,
+        status: d.status,
+      },
+    ],
+    { session },
+  );
   return doc._id;
 }
 
@@ -119,11 +125,23 @@ export interface DraftOptions {
   log?: Log;
 }
 
-export async function draftFromResearch(
+/**
+ * A finished draft run that has not touched the database: the versions to
+ * save (a rejected first version when it needed a revision, then the final
+ * one) and the outcome. Composing and saving are separate so the Write path
+ * can do all the slow AI work first and then commit in one transaction.
+ */
+export interface ComposedDraft {
+  /** In save order; each later version is saved as a revision of the one before. */
+  versions: Omit<DraftSaveInput, 'revisionOf'>[];
+  result: Omit<DraftRunResult, 'draftId'>;
+}
+
+export async function composeDraft(
   concept: ConceptDoc,
   researchDoc: ResearchDoc,
   opts: DraftOptions = {},
-): Promise<DraftRunResult> {
+): Promise<ComposedDraft> {
   const log = opts.log ?? noop;
   installUsageSink();
   setUsageConcept(concept.slug);
@@ -159,10 +177,12 @@ export async function draftFromResearch(
     let violations = winner.constraintViolations;
     let revised = false;
     let version = 1;
-    let revisionOf: Types.ObjectId | null = null;
+    const versions: ComposedDraft['versions'] = [];
 
     if (!passes(winnerEval, violations)) {
-      revisionOf = await saveDraft({
+      // Kept as history: the first version, saved as rejected, with the
+      // revision pointing back at it.
+      versions.push({
         concept,
         researchId: researchDoc._id,
         angle: winner.angle,
@@ -174,7 +194,6 @@ export async function draftFromResearch(
         strengths,
         violations,
         version: 1,
-        revisionOf: null,
         status: 'rejected',
       });
 
@@ -208,7 +227,7 @@ export async function draftFromResearch(
     }
 
     const passed = passes({ score, autoFails }, violations);
-    const draftId = await saveDraft({
+    versions.push({
       concept,
       researchId: researchDoc._id,
       angle: winner.angle,
@@ -220,29 +239,52 @@ export async function draftFromResearch(
       strengths,
       violations,
       version,
-      revisionOf,
       status: passed ? 'pending' : 'rejected',
     });
-    log(`saved draft ${draftId} (${passed ? 'pending review' : 'dead'})`);
 
     return {
-      conceptSlug: concept.slug,
-      status: passed ? 'pass' : 'dead',
-      draftId: draftId.toString(),
-      researchId: researchDoc._id.toString(),
-      angle: winner.angle,
-      term,
-      body,
-      score,
-      autoFails,
-      issues,
-      constraintViolations: violations,
-      revised,
-      critique,
+      versions,
+      result: {
+        conceptSlug: concept.slug,
+        status: passed ? 'pass' : 'dead',
+        researchId: researchDoc._id.toString(),
+        angle: winner.angle,
+        term,
+        body,
+        score,
+        autoFails,
+        issues,
+        constraintViolations: violations,
+        revised,
+        critique,
+      },
     };
   } finally {
     setUsageConcept(null);
   }
+}
+
+/** Saves a composed run's versions, linked in order. Returns the final draft's id. */
+export async function persistDraft(composed: ComposedDraft, session?: ClientSession): Promise<Types.ObjectId> {
+  let previous: Types.ObjectId | null = null;
+  for (const v of composed.versions) {
+    previous = await saveDraft({ ...v, revisionOf: previous }, session);
+  }
+  if (!previous) throw new Error('A draft run produced nothing to save.');
+  return previous;
+}
+
+/** Compose and save straight away. Used by the CLI, regenerate and the Inngest job. */
+export async function draftFromResearch(
+  concept: ConceptDoc,
+  researchDoc: ResearchDoc,
+  opts: DraftOptions = {},
+): Promise<DraftRunResult> {
+  const log = opts.log ?? noop;
+  const composed = await composeDraft(concept, researchDoc, opts);
+  const draftId = await persistDraft(composed);
+  log(`saved draft ${draftId} (${composed.result.status === 'pass' ? 'pending review' : 'dead'})`);
+  return { ...composed.result, draftId: draftId.toString() };
 }
 
 /* ── concept state transitions ────────────────────────────────────────────── */
@@ -274,8 +316,13 @@ export async function releaseStaleClaims(now = new Date()): Promise<number> {
   }).lean<ConceptDoc[]>();
   if (stuck.length === 0) return 0;
 
-  // A concept with a draft is genuinely mid-review, not stranded.
-  const withDrafts = await Draft.find({ conceptId: { $in: stuck.map((c) => c._id) } }, { conceptId: 1 }).lean<
+  // A concept with a live draft is genuinely mid-review, not stranded. A
+  // rejected one does not count: a run cut off after saving its rejected
+  // first version, before the revision, is just as stranded.
+  const withDrafts = await Draft.find(
+    { conceptId: { $in: stuck.map((c) => c._id) }, status: { $in: ['pending', 'approved', 'published'] } },
+    { conceptId: 1 },
+  ).lean<
     { conceptId: Types.ObjectId }[]
   >();
   const hasDraft = new Set(withDrafts.map((d) => String(d.conceptId)));
@@ -346,6 +393,90 @@ export async function generateForConcept(
       { _id: concept._id, status: 'selected' },
       { $set: { status: 'backlog', coveredAt: null, note: `Pipeline error: ${(e as Error).message.slice(0, 500)}` } },
     );
+    throw e;
+  }
+}
+
+/* ── the Write step: all or nothing ───────────────────────────────────────── */
+
+/** How long one Write may hold its subtopic: Vercel's function limit. */
+const WRITE_LEASE_MS = 300_000;
+
+/** Why a draft was killed, kept on the subtopic so the next run can see it. */
+function deadNote(result: Omit<DraftRunResult, 'draftId'>): string {
+  const note =
+    `Draft killed ${new Date().toISOString().slice(0, 10)}: score ${result.score}/10` +
+    (result.autoFails.length ? `, auto-fails: ${result.autoFails.join(', ')}` : '') +
+    (result.constraintViolations.length ? `, constraints: ${result.constraintViolations.join('; ')}` : '') +
+    (result.issues.length ? `. ${result.issues[0]}` : '');
+  return note.slice(0, 1_000);
+}
+
+/**
+ * Write a post for a subtopic whose research is done, atomically.
+ *
+ * The subtopic never leaves the backlog while this runs: a lease
+ * (`writeLockedUntil`) stops a second Write, and nothing else changes. All
+ * the AI work (write, critique, revise) happens first and saves nothing.
+ * Then one transaction saves the drafts and moves the subtopic on, only if
+ * the lease is still ours. So the outcome is either "drafted" or "exactly as
+ * before": an error, a timeout or a killed function leaves no half state,
+ * and an abandoned lease just runs out.
+ */
+export async function writePost(
+  slug: string,
+  opts: DraftOptions & {
+    /** The AI half; replaceable so tests can exercise the commit rules without model calls. */
+    compose?: typeof composeDraft;
+  } = {},
+): Promise<DraftRunResult> {
+  const log = opts.log ?? noop;
+  const now = new Date();
+  const until = new Date(now.getTime() + WRITE_LEASE_MS);
+  const concept = await Concept.findOneAndUpdate(
+    { slug, status: 'backlog', $or: [{ writeLockedUntil: null }, { writeLockedUntil: { $lte: now } }] },
+    { $set: { writeLockedUntil: until } },
+    { new: true },
+  ).lean<ConceptDoc>();
+  if (!concept) {
+    const found = await Concept.findOne({ slug }, { status: 1 }).lean<Pick<ConceptDoc, 'status'>>();
+    if (!found) throw new HttpError(404, 'Subtopic not found.');
+    if (found.status !== 'backlog') throw new HttpError(409, `This subtopic is ${found.status}, not waiting to be written.`);
+    throw new HttpError(409, 'This subtopic is already being written. Give it a minute.');
+  }
+
+  // Our lease is the exact time we set; matching on it means we never touch a
+  // newer Write's lease.
+  const release = () => Concept.updateOne({ _id: concept._id, writeLockedUntil: until }, { $set: { writeLockedUntil: null } });
+  try {
+    const research = await freshResearchFor(concept);
+    if (!research) throw new HttpError(409, 'Research for this subtopic is not ready yet. Run research first.');
+
+    const composed = await (opts.compose ?? composeDraft)(concept, research, opts);
+    if (Date.now() >= until.getTime()) {
+      throw new Error('Writing took longer than the time allowed, so nothing was saved. Try again.');
+    }
+
+    const passed = composed.result.status === 'pass';
+    let draftId: Types.ObjectId | null = null;
+    await mongoose.connection.transaction(async (session) => {
+      const moved = await Concept.updateOne(
+        { _id: concept._id, status: 'backlog', writeLockedUntil: until },
+        passed
+          ? { $set: { status: 'selected', coveredAt: new Date(), note: null, writeLockedUntil: null } }
+          : { $set: { note: deadNote(composed.result), writeLockedUntil: null } },
+        { session },
+      );
+      if (moved.modifiedCount !== 1) {
+        throw new Error('This subtopic changed while it was being written, so nothing was saved. Try again.');
+      }
+      draftId = await persistDraft(composed, session);
+    });
+    if (!draftId) throw new Error('The draft was not saved.');
+    log(`saved draft ${draftId} (${passed ? 'pending review' : 'dead'})`);
+    return { ...composed.result, draftId: String(draftId) };
+  } catch (e) {
+    await release().catch(() => {});
     throw e;
   }
 }

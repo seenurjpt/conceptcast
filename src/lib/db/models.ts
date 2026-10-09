@@ -38,6 +38,12 @@ export interface ConceptDoc {
   storyDate: Date | null;
   /** Background research pool bookkeeping (lib/research). */
   researchState: ResearchState;
+  /**
+   * A Write in progress holds the subtopic until this time (a lease, not a
+   * status): it stays in the backlog while drafting, and if the run dies the
+   * lease simply runs out. Null when nobody is writing it.
+   */
+  writeLockedUntil: Date | null;
   createdAt: Date;
 }
 
@@ -117,6 +123,7 @@ const ConceptSchema = new Schema<ConceptDoc>({
   origin: { type: String, required: true, enum: ['seed', 'proposal', 'news', 'user', 'suggested'], default: 'seed' },
   storyDate: { type: Date, default: null },
   researchState: { type: ResearchStateSchema, default: () => ({ ...EMPTY_RESEARCH_STATE }) },
+  writeLockedUntil: { type: Date, default: null },
   createdAt: { type: Date, required: true, default: () => new Date() },
 });
 ConceptSchema.index({ status: 1, track: 1 });
