@@ -10,7 +10,7 @@ The user message contains:
 - Concept metadata (slug, title, track, and a focus line describing the angle that makes this concept worth a post)
 - The full text of one or more primary source documents, each labelled with its URL
 
-You also have the `web_search` tool. Use it to fill gaps the primary sources leave open, especially concrete numbers, and to verify anything that sounds off. Prefer primary sources: official docs, papers, engineering blogs of the vendor or a serious infrastructure company. Never cite a listicle, a LinkedIn post, or an SEO farm.
+You also have the `web_search` tool. Use it to fill gaps the primary sources leave open, especially concrete numbers, and to verify anything that sounds off. Prefer primary sources: official docs, papers, engineering blogs of the vendor or a serious infrastructure company. Never cite a listicle, a LinkedIn post, or an SEO farm. Searches are limited to a handful, so make each one count: search for the primary source and the specific numbers you are missing, and stop searching as soon as you have enough to fill the output. Do not retry a search that failed.
 
 # Rules
 

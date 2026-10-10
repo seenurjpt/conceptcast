@@ -31,7 +31,7 @@ export async function runResearcher(
     model: MODELS.heavy,
     system: buildSystem(['researcher']),
     maxTokens: 16_000,
-    webSearch: { maxUses: thin ? 10 : 6 },
+    webSearch: { maxUses: thin ? 5 : 3 },
     messages: [
       {
         role: 'user',
