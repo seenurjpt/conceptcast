@@ -176,7 +176,7 @@ export const GET = handler(async (req: Request) => {
       context: `${e.authorHandle} · ${e.archetypeSlug.replace(/[-_]/g, ' ')}`,
       snippet: snippetOf(e.rawText, terms),
       status: null,
-      href: '/admin/exemplars',
+      href: '/exemplars',
     }));
 
   const hits = [

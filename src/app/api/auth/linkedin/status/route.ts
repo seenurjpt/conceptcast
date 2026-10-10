@@ -3,6 +3,7 @@ import { handler, ok } from '@/lib/api';
 import { LinkedInAuth } from '@/lib/db/models';
 import { getAuth, authState, refreshIfDue } from '@/lib/publishers/linkedin';
 import { SESSION_COOKIE } from '@/lib/authCookie';
+import { endAllAppSessions } from '@/lib/appSessions';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,7 @@ export const POST = handler(async () => ok(await refreshIfDue()));
 /** Sign out: forget the stored tokens and close the front door. */
 export const DELETE = handler(async () => {
   await LinkedInAuth.deleteOne({ key: 'singleton' });
+  await endAllAppSessions();
   const res = NextResponse.json({ state: 'missing', signedIn: false });
   res.cookies.delete(SESSION_COOKIE);
   return res;

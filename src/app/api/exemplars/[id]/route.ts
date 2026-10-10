@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** DELETE /api/admin/exemplars/[id] */
+/** DELETE /api/exemplars/[id] */
 export const DELETE = handler(async (_req: Request, ctx: Ctx) => {
   await requireUserId();
   const { id } = await ctx.params;

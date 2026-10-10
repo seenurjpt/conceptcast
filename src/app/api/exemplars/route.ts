@@ -8,7 +8,7 @@ import { MIN_EXEMPLARS } from '@/lib/pipeline/postPipeline';
 
 export const dynamic = 'force-dynamic';
 
-/** GET /api/admin/exemplars → archetypes with their exemplar counts, and every exemplar. */
+/** GET /api/exemplars → archetypes with their exemplar counts, and every exemplar. */
 export const GET = handler(async () => {
   await requireUserId();
   const [list, counts, all] = await Promise.all([archetypes.list(), exemplars.countByArchetype(), exemplars.list()]);
@@ -33,7 +33,7 @@ const Body = z.object({
   annotations: ExemplarAnnotationsSchema,
 });
 
-/** POST /api/admin/exemplars { archetypeSlug, authorHandle, rawText, annotations } */
+/** POST /api/exemplars { archetypeSlug, authorHandle, rawText, annotations } */
 export const POST = handler(async (req: Request) => {
   const userId = await requireUserId();
   const body = await readJson(req, Body);

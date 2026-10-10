@@ -216,7 +216,7 @@ Every stage is its own Inngest step, so a retry never re-bills an earlier call. 
 **Before the first run**
 
 1. `npm run seed:archetypes` upserts the six archetypes and creates the indexes.
-2. Open `/admin/exemplars` and paste at least three real posts per archetype you want to use. The pipeline refuses to write for an archetype with fewer than three and says so in the run error.
+2. Open `/exemplars` and paste at least three real posts per archetype you want to use. The pipeline refuses to write for an archetype with fewer than three and says so in the run error.
 3. On `/voice`, add at least ten voice samples (posts, Slack messages, PR descriptions) and click **Extract profile**. The pipeline needs an active `voice_profiles` row. A new version is also extracted automatically after every 30 approved drafts.
 4. Keys: there is no environment key. Every call uses a key the signed-in user stored under **Settings** (`PUT /api/user/keys { anthropicKey?, openaiKey?, geminiKey?, preferredProvider? }`), verified against the provider on save and AES-256-GCM encrypted with `KEY_ENCRYPTION_SECRET`. The preferred provider is tried first; a 401 moves on to the next stored key. See [Bring your own AI key](#bring-your-own-ai-key).
 
@@ -230,7 +230,7 @@ GET/PATCH /api/posts/drafts/[id]         edit sections/hashtags → re-assemble,
 POST   /api/posts/drafts/[id]/approve    status 'approved' (drafts end here; posting is a non-goal)
 GET/POST /api/voice/samples              { text, source }
 POST   /api/voice/extract                {} → enqueue voice extraction ({ posts[] } keeps the legacy style guide)
-GET/POST /api/admin/exemplars            DELETE /api/admin/exemplars/[id]
+GET/POST /api/exemplars                  DELETE /api/exemplars/[id]
 GET/PUT /api/user/keys                   BYO provider keys
 ```
 

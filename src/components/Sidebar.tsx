@@ -38,7 +38,7 @@ export const NAV_GROUPS: { title: string; items: Item[] }[] = [
     title: 'Improve',
     items: [
       { href: '/voice', label: 'Voice', icon: Mic01Icon },
-      { href: '/admin/exemplars', label: 'Exemplars', icon: Bookmark02Icon },
+      { href: '/exemplars', label: 'Exemplars', icon: Bookmark02Icon },
       { href: '/analytics', label: 'Analytics', icon: Analytics01Icon },
     ],
   },

@@ -15,6 +15,13 @@ const cache: MongooseCache = globalWithMongoose._mongoose ?? { conn: null, promi
 globalWithMongoose._mongoose = cache;
 
 export async function dbConnect(): Promise<typeof mongoose> {
+  // The cache outlives dev-mode module reloads, but mongoose itself may have
+  // been reloaded (an .env edit does this). A cached connection from the old
+  // instance would leave queries on the new one buffering until they time out.
+  if (cache.conn && (cache.conn !== mongoose || mongoose.connection.readyState === 0)) {
+    cache.conn = null;
+    cache.promise = null;
+  }
   if (cache.conn) return cache.conn;
   if (!cache.promise) {
     const uri = process.env.MONGODB_URI;

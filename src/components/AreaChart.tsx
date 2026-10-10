@@ -249,23 +249,27 @@ function AreaChartPlot({ data, unit, caption, height = 220, width }: ChartProps 
         </div>
       </div>
 
-      <table className="sr-only">
-        <caption>{caption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Week of</th>
-            <th scope="col">{unit[1]}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((d) => (
-            <tr key={d.start}>
-              <td>{dateLabel(d.start)}</td>
-              <td>{d.value}</td>
+      {/* sr-only goes on a wrapper: a table ignores the 1px height and the
+          overflow clip, so its hidden rows would still lengthen the page. */}
+      <div className="sr-only">
+        <table>
+          <caption>{caption}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Week of</th>
+              <th scope="col">{unit[1]}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((d) => (
+              <tr key={d.start}>
+                <td>{dateLabel(d.start)}</td>
+                <td>{d.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }

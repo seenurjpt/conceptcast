@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE, verifySessionValue } from '@/lib/authCookie';
+import { ADMIN_COOKIE, verifyAdminSession } from '@/lib/admin/session';
 
 /**
  * Front door. Without a valid session cookie every dashboard page and every
@@ -30,6 +31,23 @@ const PUBLIC_EXACT = new Set(['/', '/about', '/privacy', '/robots.txt', '/sitema
 
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
+
+  // The admin panel has its own front door and its own cookie; the user's
+  // LinkedIn session plays no part here, either way.
+  if (pathname === '/admin' || pathname.startsWith('/admin/') || pathname.startsWith('/api/admin/')) {
+    if (pathname === '/admin/login' || pathname === '/api/admin/login' || pathname === '/api/admin/logout') {
+      return NextResponse.next();
+    }
+    if (await verifyAdminSession(req.cookies.get(ADMIN_COOKIE)?.value)) return NextResponse.next();
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Admin sign-in required.' }, { status: 401 });
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = '/admin/login';
+    url.search = '';
+    if (pathname !== '/admin') url.searchParams.set('next', pathname + search);
+    return NextResponse.redirect(url);
+  }
 
   // The landing page is static and cached; the only per-visitor decision is
   // made here at the edge, from the cookie alone, so the page never touches the

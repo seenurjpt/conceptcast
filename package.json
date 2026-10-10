@@ -22,7 +22,8 @@
     "smoke-db": "tsx scripts/smoke-db.ts",
     "verify-sources": "tsx scripts/verify-sources.ts",
     "inngest:dev": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest",
-    "strip-em-dashes": "tsx scripts/strip-em-dashes.ts"
+    "strip-em-dashes": "tsx scripts/strip-em-dashes.ts",
+    "admin:hash": "tsx scripts/admin-hash.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",

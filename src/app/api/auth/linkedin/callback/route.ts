@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { dbConnect } from '@/lib/db/connect';
 import { exchangeCode, fetchUserInfo, storeTokens } from '@/lib/publishers/linkedin';
 import { SESSION_COOKIE, createSessionValue, sessionCookieOptions } from '@/lib/authCookie';
+import { startAppSession } from '@/lib/appSessions';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +45,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const destination = new URL(returnTo, req.url);
     destination.searchParams.set('linkedin', 'signed-in');
     const res = back(req, { next: destination.pathname + destination.search }, '/welcome');
-    res.cookies.set(SESSION_COOKIE, await createSessionValue(), sessionCookieOptions);
+    const session = await createSessionValue();
+    res.cookies.set(SESSION_COOKIE, session, sessionCookieOptions);
+    await startAppSession(session, { urn: `urn:li:person:${me.sub}`, name: me.name }, req.headers.get('user-agent') ?? '');
     return res;
   } catch (e) {
     return back(req, { linkedin: 'error', message: (e as Error).message.slice(0, 200) });

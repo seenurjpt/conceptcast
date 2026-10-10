@@ -45,7 +45,7 @@ export default function ExemplarsAdminPage() {
 
   const load = useCallback(async () => {
     try {
-      const r = await getJson<Listing>('/api/admin/exemplars');
+      const r = await getJson<Listing>('/api/exemplars');
       setData(r);
       setSlug((s) => s || r.archetypes[0]?.slug || '');
     } catch (e) {
@@ -81,7 +81,7 @@ export default function ExemplarsAdminPage() {
     } catch {
       /* ignore */
     }
-    const r = await sendJson<{ count: number }>('/api/admin/exemplars', 'POST', {
+    const r = await sendJson<{ count: number }>('/api/exemplars', 'POST', {
       archetypeSlug: slug,
       authorHandle: author,
       rawText,
@@ -96,7 +96,7 @@ export default function ExemplarsAdminPage() {
   };
 
   const remove = async (id: string) => {
-    await sendJson(`/api/admin/exemplars/${id}`, 'DELETE');
+    await sendJson(`/api/exemplars/${id}`, 'DELETE');
     await load();
   };
 

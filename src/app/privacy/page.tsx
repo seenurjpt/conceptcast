@@ -12,7 +12,7 @@ export const dynamic = 'force-static';
  * a delete-my-data button), update this page and LAST_UPDATED with it.
  */
 
-const LAST_UPDATED = 'October 8, 2026';
+const LAST_UPDATED = 'October 9, 2026';
 const DESCRIPTION = 'What conceptcast collects, why, who it is shared with, how long it is kept, and the choices you have.';
 
 export const metadata: Metadata = {
@@ -129,6 +129,14 @@ export default function PrivacyPage() {
                       and country. Counted without cookies, and without identifying who you are.
                     </td>
                     <td>Vercel Web Analytics, on every page</td>
+                  </tr>
+                  <tr>
+                    <td>Sign-in sessions</td>
+                    <td>
+                      For each browser you sign in on: which LinkedIn account, when you signed in, when you last used the
+                      app, and the browser type. Used to count who is signed in. The sign-in cookie itself is not stored.
+                    </td>
+                    <td>The app, when you sign in and use it</td>
                   </tr>
                   <tr>
                     <td>Usage records</td>
@@ -272,6 +280,7 @@ export default function PrivacyPage() {
               <ul>
                 <li>Your content, research, post history and usage records are kept until they are deleted, so your history stays available.</li>
                 <li>Signing out deletes your LinkedIn connection (name, photo, member details and tokens) from the app.</li>
+                <li>Sign-in session records are deleted automatically 30 days after you sign in.</li>
                 <li>Removing an AI key in Settings deletes it.</li>
                 <li>Scheduled posts can be unscheduled, and saved example posts deleted, from within the app.</li>
                 <li>

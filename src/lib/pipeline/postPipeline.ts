@@ -263,7 +263,7 @@ export async function runPostPipeline(input: PipelineInput, deps: PipelineDeps):
       const pool = await store.exemplarsFor(archetype.slug);
       if (pool.length < MIN_EXEMPLARS) {
         return failRun(
-          `Archetype "${archetype.slug}" has ${pool.length} exemplar(s); the writer needs at least ${MIN_EXEMPLARS}. Add them at /admin/exemplars.`,
+          `Archetype "${archetype.slug}" has ${pool.length} exemplar(s); the writer needs at least ${MIN_EXEMPLARS}. Add them at /exemplars.`,
         );
       }
       const verifiedAnchors = angle.verifiedAnchors ?? angle.concreteEvidence;
